@@ -1,0 +1,44 @@
+# Normalize all text files to LF in the repo, while letting Git convert
+# to CRLF on checkout for Windows users who expect it locally.
+* text=auto eol=lf
+
+# ---- Binary (never normalize, never diff as text) ----
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.bmp   binary
+*.ico   binary
+*.cur   binary
+*.ani   binary
+*.tif   binary
+*.tiff  binary
+*.webp  binary
+*.pdf   binary
+*.zip   binary
+*.7z    binary
+*.gz    binary
+*.tar   binary
+*.rar   binary
+*.dll   binary
+*.exe   binary
+*.pdb   binary
+*.snupkg binary
+*.nupkg binary
+*.pfx   binary
+*.p12   binary
+*.pem   binary
+*.key   binary
+*.ppk   binary
+
+# ---- C# / XAML source: LF in repo ----
+*.cs    text eol=lf
+*.xaml  text eol=lf
+*.csproj text eol=lf
+*.sln   text eol=lf
+*.ps1   text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.manifest text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
