@@ -226,8 +226,35 @@ public partial class AddEditDialog : Window
 
         if (_editing != null)
         {
-            config.HostKeyFingerprint = _editing.HostKeyFingerprint;
-            config.HostKeyTrust = _editing.HostKeyTrust;
+            // If the user changed the SSH host, the previously trusted
+            // fingerprint no longer applies — the next connect must
+            // re-prompt for the host key. Otherwise we'd either silently
+            // trust a different server, or auto-reconnect into a rejection
+            // loop because Trust != Unknown never re-prompts the user.
+            bool hostChanged;
+            try
+            {
+                var oldHost = CryptoHelper.Decrypt(_editing.EncryptedHost);
+                hostChanged = !string.Equals(
+                    oldHost, host, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                // Couldn't read the old host back (corrupt config, etc.):
+                // be safe and force a fresh verification.
+                hostChanged = true;
+            }
+
+            if (hostChanged)
+            {
+                config.HostKeyFingerprint = string.Empty;
+                config.HostKeyTrust = HostKeyTrust.Unknown;
+            }
+            else
+            {
+                config.HostKeyFingerprint = _editing.HostKeyFingerprint;
+                config.HostKeyTrust = _editing.HostKeyTrust;
+            }
         }
 
         return config;

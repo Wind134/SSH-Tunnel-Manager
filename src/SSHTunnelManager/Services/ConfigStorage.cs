@@ -102,9 +102,11 @@ public class ConfigStorage
         var json = JsonSerializer.Serialize(config, s_jsonOpts);
         File.WriteAllText(s_tmpPath, json);
 
-        if (File.Exists(s_configPath))
-            File.Delete(s_configPath);
-        File.Move(s_tmpPath, s_configPath);
+        // File.Move with overwrite:true is a single atomic rename on Windows
+        // (the old delete-then-move sequence left a window where a crash could
+        // lose the config entirely; the .bak fallback covered it, but this is
+        // strictly safer).
+        File.Move(s_tmpPath, s_configPath, overwrite: true);
     }
 
     public static string GetConfigPath() => s_configPath;

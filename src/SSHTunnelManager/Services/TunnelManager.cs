@@ -126,11 +126,11 @@ public class TunnelManager : IDisposable
         TunnelStates.Add(state);
     }
 
-    public void RemoveTunnel(Guid id)
+    public async Task RemoveTunnelAsync(Guid id)
     {
         if (_tunnels.TryGetValue(id, out var state))
         {
-            StopTunnel(state).Wait();
+            await StopTunnel(state);
             _tunnels.Remove(id);
             TunnelStates.Remove(state);
         }
@@ -169,12 +169,20 @@ public class TunnelManager : IDisposable
     {
         if (state.Status == TunnelStatus.Connected || state.Status == TunnelStatus.Connecting)
             return;
+        if (_disposed)
+            return;
+
+        // Each fresh start gets its own cancel token so StopTunnel / Dispose
+        // can interrupt a long-running Connect attempt and any scheduled
+        // reconnect in the background.
+        state.ReconnectCts?.Cancel();
+        state.ReconnectCts = new CancellationTokenSource();
 
         state.Status = TunnelStatus.Connecting;
         state.StatusMessage = string.Empty;
         state.ReconnectAttempts = 0;
 
-        await ConnectAsync(state);
+        await ConnectAsync(state, state.ReconnectCts.Token);
     }
 
     public Task StopTunnel(TunnelState state)
@@ -182,22 +190,7 @@ public class TunnelManager : IDisposable
         state.ReconnectCts?.Cancel();
         state.ReconnectCts = null;
 
-        try
-        {
-            state.ForwardedPort?.Stop();
-            state.ForwardedPort?.Dispose();
-        }
-        catch { /* ignore */ }
-
-        try
-        {
-            state.Client?.Disconnect();
-            state.Client?.Dispose();
-        }
-        catch { /* ignore */ }
-
-        state.ForwardedPort = null;
-        state.Client = null;
+        CleanupResources(state);
         state.Status = TunnelStatus.Disconnected;
         state.StatusMessage = string.Empty;
         state.ConnectedSince = null;
@@ -223,10 +216,13 @@ public class TunnelManager : IDisposable
             await StopTunnel(state);
     }
 
-    private async Task ConnectAsync(TunnelState state)
+    private async Task ConnectAsync(TunnelState state, CancellationToken ct)
     {
         var config = state.Config;
         var name = config.Name;
+
+        if (_disposed || ct.IsCancellationRequested)
+            return;
 
         try
         {
@@ -269,19 +265,33 @@ public class TunnelManager : IDisposable
             {
                 var fingerprintHex = BitConverter.ToString(e.FingerPrint).Replace("-", ":");
 
+                // Previously trusted and the fingerprint still matches: silently trust.
                 if (config.HostKeyTrust == HostKeyTrust.Trusted
                     && fingerprintHex == config.HostKeyFingerprint)
                 {
                     e.CanTrust = true;
+                    return;
                 }
-                else if (config.HostKeyTrust == HostKeyTrust.Unknown
-                    || string.IsNullOrEmpty(config.HostKeyFingerprint))
-                {
-                    Log(name, $"Host key fingerprint: {e.HostKeyName} {fingerprintHex}");
 
-                    bool trust = false;
-                    state.Status = TunnelStatus.HostKeyPending;
-                    trust = OnHostKeyReceived?.Invoke(state, fingerprintHex, e.HostKeyName) ?? false;
+                // Previously rejected (user clicked "don't trust" once, or the trusted
+                // fingerprint changed without being reset): never auto-reconnect in this
+                // state, otherwise the user is forced to dismiss 5 dialogs in a row.
+                if (config.HostKeyTrust == HostKeyTrust.Rejected)
+                {
+                    e.CanTrust = false;
+                    Log(name, $"Host key previously rejected ({e.HostKeyName} {fingerprintHex}) - connection refused");
+                    return;
+                }
+
+                // First-time (Unknown) or the trusted fingerprint no longer matches.
+                // Both need explicit user confirmation; persist the result either way
+                // so we don't keep nagging on every reconnect attempt.
+                if (config.HostKeyTrust == HostKeyTrust.Trusted)
+                    Log(name, "WARNING: stored fingerprint differs from the one offered by the server");
+                Log(name, $"Host key fingerprint: {e.HostKeyName} {fingerprintHex}");
+
+                state.Status = TunnelStatus.HostKeyPending;
+                bool trust = OnHostKeyReceived?.Invoke(state, fingerprintHex, e.HostKeyName) ?? false;
 
                 if (trust)
                 {
@@ -291,20 +301,40 @@ public class TunnelManager : IDisposable
                     Log(name, "Host key accepted by user");
                     ConfigChanged?.Invoke();
                 }
-                    else
-                    {
-                        e.CanTrust = false;
-                        Log(name, "Host key rejected by user");
-                    }
-                }
                 else
                 {
+                    // Persist the offered fingerprint AND the rejection, so the next
+                    // reconnect (or a heartbeat-triggered retry) doesn't prompt again.
+                    // The user can reset this by editing and re-saving the tunnel.
+                    config.HostKeyFingerprint = fingerprintHex;
+                    config.HostKeyTrust = HostKeyTrust.Rejected;
                     e.CanTrust = false;
-                    Log(name, "Host key mismatch - connection rejected");
+                    Log(name, "Host key rejected by user");
+                    ConfigChanged?.Invoke();
                 }
             };
 
-            await Task.Run(() => state.Client.Connect());
+            // SSH.NET's Connect() doesn't accept a cancellation token, so we wrap it
+            // with WaitAsync: cancelling the token abandons the await (and we then
+            // dispose the half-built client), even if the underlying socket keeps
+            // grinding through its own timeout.
+            var connectTask = Task.Run(() => state.Client.Connect());
+            try
+            {
+                await connectTask.WaitAsync(ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                CleanupResources(state);
+                state.Status = TunnelStatus.Disconnected;
+                state.StatusMessage = "Cancelled";
+                Log(name, "Connection cancelled");
+                // The background Connect() may still be touching the now-disposed
+                // client; observe its eventual fault so it never becomes an
+                // unobserved-task-exception.
+                _ = connectTask.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+                return;
+            }
 
             Log(name, "SSH authenticated successfully");
 
@@ -327,17 +357,24 @@ public class TunnelManager : IDisposable
         }
         catch (SshException ex)
         {
+            CleanupResources(state);
             state.Status = TunnelStatus.Failed;
-            state.StatusMessage = ex.Message;
-            Log(name, $"Connection failed: {ex.Message}");
-            TryReconnect(state);
+            var masked = ScrubHost(ex.Message, config);
+            state.StatusMessage = masked;
+            Log(name, $"Connection failed: {masked}");
+            // Don't reschedule if the user (or Dispose) cancelled mid-attempt.
+            if (!ct.IsCancellationRequested)
+                TryReconnect(state, ex);
         }
         catch (Exception ex)
         {
+            CleanupResources(state);
             state.Status = TunnelStatus.Failed;
-            state.StatusMessage = ex.Message;
-            Log(name, $"Error: {ex.Message}");
-            TryReconnect(state);
+            var masked = ScrubHost(ex.Message, config);
+            state.StatusMessage = masked;
+            Log(name, $"Error: {masked}");
+            if (!ct.IsCancellationRequested)
+                TryReconnect(state, ex);
         }
     }
 
@@ -423,10 +460,30 @@ public class TunnelManager : IDisposable
         }
     }
 
-    private void TryReconnect(TunnelState state)
+    private void TryReconnect(TunnelState state, Exception? failure = null)
     {
         if (!state.Config.AutoReconnect)
             return;
+
+        // Host key was explicitly rejected (or a trusted fingerprint changed and
+        // the user didn't accept the new one). Reconnecting would just re-prompt
+        // repeatedly, so stop. The user can edit the tunnel to reset trust.
+        if (state.Config.HostKeyTrust == HostKeyTrust.Rejected)
+        {
+            Log(state.Config.Name, "Host key rejected - automatic reconnect disabled. Edit and re-save the tunnel to re-verify.");
+            return;
+        }
+
+        // Configuration errors won't fix themselves by retrying: a missing /
+        // unreadable / unsupported key file needs the user to convert or repair
+        // it. Reconnecting 5 times just spams the log with the same error.
+        if (failure is InvalidOperationException
+            or FileNotFoundException
+            or UnauthorizedAccessException)
+        {
+            Log(state.Config.Name, "Configuration error - automatic reconnect disabled. Please fix the tunnel settings.");
+            return;
+        }
 
         if (state.ReconnectAttempts >= 5)
         {
@@ -451,7 +508,7 @@ public class TunnelManager : IDisposable
                     return;
 
                 state.Status = TunnelStatus.Connecting;
-                await ConnectAsync(state);
+                await ConnectAsync(state, ct);
             }
             catch (OperationCanceledException) { /* expected */ }
             catch (Exception ex)
@@ -497,16 +554,57 @@ public class TunnelManager : IDisposable
 
         foreach (var state in _tunnels.Values.ToList())
         {
+            // Cancel any pending reconnect FIRST, so a delayed reconnect task
+            // that fires after we've torn everything down doesn't resurrect a
+            // half-disposed tunnel.
+            state.ReconnectCts?.Cancel();
+            state.ReconnectCts = null;
             try
             {
-                state.ForwardedPort?.Stop();
-                state.ForwardedPort?.Dispose();
-                state.Client?.Disconnect();
-                state.Client?.Dispose();
+                CleanupResources(state);
+                state.Status = TunnelStatus.Disconnected;
             }
             catch { /* ignore */ }
         }
 
         _tunnels.Clear();
+    }
+
+    // Idempotent teardown of the SSH client + forwarded port attached to a state.
+    // Safe to call from any thread (StopTunnel, ConnectAsync catch, Dispose)
+    // because it tolerates null refs and swallows double-dispose.
+    private static void CleanupResources(TunnelState state)
+    {
+        try
+        {
+            state.ForwardedPort?.Stop();
+            state.ForwardedPort?.Dispose();
+        }
+        catch { /* ignore */ }
+        try
+        {
+            state.Client?.Disconnect();
+            state.Client?.Dispose();
+        }
+        catch { /* ignore */ }
+        state.ForwardedPort = null;
+        state.Client = null;
+    }
+
+    // SSH.NET exceptions frequently embed the literal "host:port" in their
+    // messages; scrub the decrypted host out before we surface the text in the
+    // UI / log, mirroring MaskIp usage elsewhere.
+    private static string ScrubHost(string message, TunnelConfig config)
+    {
+        if (string.IsNullOrEmpty(message))
+            return message;
+        try
+        {
+            var host = CryptoHelper.Decrypt(config.EncryptedHost);
+            if (!string.IsNullOrEmpty(host) && message.Contains(host, StringComparison.Ordinal))
+                return message.Replace(host, CryptoHelper.MaskIp(host), StringComparison.Ordinal);
+        }
+        catch { /* decryption failure - leave the message as-is */ }
+        return message;
     }
 }

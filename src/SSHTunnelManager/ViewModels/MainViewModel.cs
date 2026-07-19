@@ -64,7 +64,9 @@ public class MainViewModel : INotifyPropertyChanged
 
         AddTunnelCommand = new RelayCommand(_ => true, _ => AddTunnel());
         EditTunnelCommand = new RelayCommand(p => p is TunnelState, p => EditTunnel((TunnelState)p!));
-        DeleteTunnelCommand = new RelayCommand(p => p is TunnelState, p => DeleteTunnel((TunnelState)p!));
+            DeleteTunnelCommand = new RelayCommand(
+                p => p is TunnelState,
+                async p => await DeleteTunnelAsync((TunnelState)p!));
         StartTunnelCommand = new RelayCommand(
             p => p is TunnelState ts && ts.CanStart,
             async p => await _tunnelManager.StartTunnel((TunnelState)p!));
@@ -144,8 +146,11 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private void DeleteTunnel(TunnelState state)
+    private async Task DeleteTunnelAsync(TunnelState state)
     {
+        // Stay on the UI thread: WPF MessageBox must run on the STA thread,
+        // but the .Wait() on StopTunnel (called transitively from RemoveTunnel)
+        // would block the dispatcher if StopTunnel ever becomes truly async.
         var result = System.Windows.MessageBox.Show(
             $"Delete tunnel \"{state.Config.Name}\"?",
             "Confirm Delete",
@@ -154,7 +159,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (result == System.Windows.MessageBoxResult.Yes)
         {
-            _tunnelManager.RemoveTunnel(state.Config.Id);
+            await _tunnelManager.RemoveTunnelAsync(state.Config.Id);
             SaveConfig();
             OnPropertyChanged(nameof(StatusText));
         }
