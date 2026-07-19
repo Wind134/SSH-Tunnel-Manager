@@ -47,13 +47,13 @@ public class TunnelState : INotifyPropertyChanged
         {
             return Status switch
             {
-                TunnelStatus.Disconnected => "Disconnected",
-                TunnelStatus.Connecting => "Connecting...",
-                TunnelStatus.HostKeyPending => "Host key pending",
+                TunnelStatus.Disconnected => "已断开",
+                TunnelStatus.Connecting => "连接中…",
+                TunnelStatus.HostKeyPending => "等待主机密钥确认",
                 TunnelStatus.Connected when ConnectedSince.HasValue =>
-                    $"Connected ({(int)(DateTime.Now - ConnectedSince.Value).TotalMinutes}m)",
-                TunnelStatus.Connected => "Connected",
-                TunnelStatus.Failed => $"Failed: {StatusMessage}",
+                    $"已连接 ({(int)(DateTime.Now - ConnectedSince.Value).TotalMinutes} 分钟)",
+                TunnelStatus.Connected => "已连接",
+                TunnelStatus.Failed => $"失败：{StatusMessage}",
                 _ => string.Empty
             };
         }
@@ -196,7 +196,7 @@ public class TunnelManager : IDisposable
         state.ConnectedSince = null;
 
         var name = state.Config.Name;
-        Log(name, "Tunnel stopped");
+        Log(name, "隧道已停止");
 
         return Task.CompletedTask;
     }
@@ -230,18 +230,18 @@ public class TunnelManager : IDisposable
             if (string.IsNullOrEmpty(host))
             {
                 state.Status = TunnelStatus.Failed;
-                state.StatusMessage = "Host is empty";
-                Log(name, "Failed: host is empty");
+                state.StatusMessage = "主机为空";
+                Log(name, "失败：主机为空");
                 return;
             }
 
-            Log(name, $"Connecting to {CryptoHelper.MaskIp(host)}:{config.SshPort}...");
+            Log(name, $"正在连接 {CryptoHelper.MaskIp(host)}:{config.SshPort}…");
 
             // Precheck: the tunnel forwards to 127.0.0.1:LocalPort on this machine.
             // Warn (non-fatal) if that local target isn't actually listening, so the
             // user knows the tunnel may not reach anything.
             if (!PortChecker.IsPortInUse(config.LocalPort))
-                Log(name, $"Warning: local port {config.LocalPort} is not listening — the tunnel target may be unavailable.");
+                Log(name, $"警告：本地端口 {config.LocalPort} 未监听，隧道目标可能不可用。");
 
             AuthenticationMethod auth = config.AuthMethod switch
             {
@@ -279,7 +279,7 @@ public class TunnelManager : IDisposable
                 if (config.HostKeyTrust == HostKeyTrust.Rejected)
                 {
                     e.CanTrust = false;
-                    Log(name, $"Host key previously rejected ({e.HostKeyName} {fingerprintHex}) - connection refused");
+                    Log(name, $"该主机密钥曾被拒绝（{e.HostKeyName} {fingerprintHex}）— 连接被拒");
                     return;
                 }
 
@@ -287,8 +287,8 @@ public class TunnelManager : IDisposable
                 // Both need explicit user confirmation; persist the result either way
                 // so we don't keep nagging on every reconnect attempt.
                 if (config.HostKeyTrust == HostKeyTrust.Trusted)
-                    Log(name, "WARNING: stored fingerprint differs from the one offered by the server");
-                Log(name, $"Host key fingerprint: {e.HostKeyName} {fingerprintHex}");
+                    Log(name, "警告：已保存的指纹与服务器提供的指纹不一致");
+                Log(name, $"主机密钥指纹：{e.HostKeyName} {fingerprintHex}");
 
                 state.Status = TunnelStatus.HostKeyPending;
                 bool trust = OnHostKeyReceived?.Invoke(state, fingerprintHex, e.HostKeyName) ?? false;
@@ -298,7 +298,7 @@ public class TunnelManager : IDisposable
                     config.HostKeyFingerprint = fingerprintHex;
                     config.HostKeyTrust = HostKeyTrust.Trusted;
                     e.CanTrust = true;
-                    Log(name, "Host key accepted by user");
+                    Log(name, "用户已信任该主机密钥");
                     ConfigChanged?.Invoke();
                 }
                 else
@@ -309,7 +309,7 @@ public class TunnelManager : IDisposable
                     config.HostKeyFingerprint = fingerprintHex;
                     config.HostKeyTrust = HostKeyTrust.Rejected;
                     e.CanTrust = false;
-                    Log(name, "Host key rejected by user");
+                    Log(name, "用户已拒绝该主机密钥");
                     ConfigChanged?.Invoke();
                 }
             };
@@ -327,8 +327,8 @@ public class TunnelManager : IDisposable
             {
                 CleanupResources(state);
                 state.Status = TunnelStatus.Disconnected;
-                state.StatusMessage = "Cancelled";
-                Log(name, "Connection cancelled");
+                state.StatusMessage = "已取消";
+                Log(name, "连接已取消");
                 // The background Connect() may still be touching the now-disposed
                 // client; observe its eventual fault so it never becomes an
                 // unobserved-task-exception.
@@ -336,7 +336,7 @@ public class TunnelManager : IDisposable
                 return;
             }
 
-            Log(name, "SSH authenticated successfully");
+            Log(name, "SSH 认证成功");
 
             var forward = new ForwardedPortRemote(
                 "127.0.0.1", (uint)config.RemotePort,
@@ -346,14 +346,14 @@ public class TunnelManager : IDisposable
             forward.Start();
             state.ForwardedPort = forward;
 
-            Log(name, $"Port forwarding started: remote:{config.RemotePort} -> local:{config.LocalPort}");
+            Log(name, $"端口转发已启动：远程 {config.RemotePort} → 本地 {config.LocalPort}");
 
             // connectivity test via SSH command
             _ = Task.Run(() => TestConnectivityAsync(state));
 
             state.Status = TunnelStatus.Connected;
             state.ConnectedSince = DateTime.Now;
-            Log(name, "Tunnel established");
+            Log(name, "隧道已建立");
         }
         catch (SshException ex)
         {
@@ -361,7 +361,7 @@ public class TunnelManager : IDisposable
             state.Status = TunnelStatus.Failed;
             var masked = ScrubHost(ex.Message, config);
             state.StatusMessage = masked;
-            Log(name, $"Connection failed: {masked}");
+            Log(name, $"连接失败：{masked}");
             // Don't reschedule if the user (or Dispose) cancelled mid-attempt.
             if (!ct.IsCancellationRequested)
                 TryReconnect(state, ex);
@@ -372,7 +372,7 @@ public class TunnelManager : IDisposable
             state.Status = TunnelStatus.Failed;
             var masked = ScrubHost(ex.Message, config);
             state.StatusMessage = masked;
-            Log(name, $"Error: {masked}");
+            Log(name, $"错误：{masked}");
             if (!ct.IsCancellationRequested)
                 TryReconnect(state, ex);
         }
@@ -401,7 +401,7 @@ public class TunnelManager : IDisposable
         }
         catch (UnauthorizedAccessException)
         {
-            Log(name, $"No read permission on key file: {keyPath}");
+            Log(name, $"私钥文件无读取权限：{keyPath}");
             throw new UnauthorizedAccessException(
                 $"No permission to read the key file:\n{keyPath}\n\n" +
                 "Fix on Windows: right-click the file → Properties → Security, and grant your " +
@@ -450,13 +450,13 @@ public class TunnelManager : IDisposable
 
             var result = cmd.Result.Trim();
             if (result == "200" || result == "301" || result == "302")
-                Log(name, "Connectivity test passed");
+                Log(name, "连通性测试通过");
             else
-                Log(name, $"Connectivity test returned HTTP {result} (tunnel may be limited)");
+                Log(name, $"连通性测试返回 HTTP {result}（隧道可能受限）");
         }
         catch (Exception ex)
         {
-            Log(name, $"Connectivity test failed: {ex.Message}");
+            Log(name, $"连通性测试失败：{ex.Message}");
         }
     }
 
@@ -470,7 +470,7 @@ public class TunnelManager : IDisposable
         // repeatedly, so stop. The user can edit the tunnel to reset trust.
         if (state.Config.HostKeyTrust == HostKeyTrust.Rejected)
         {
-            Log(state.Config.Name, "Host key rejected - automatic reconnect disabled. Edit and re-save the tunnel to re-verify.");
+            Log(state.Config.Name, "主机密钥已被拒绝 — 已禁用自动重连，编辑并重新保存隧道以重新验证。");
             return;
         }
 
@@ -481,13 +481,13 @@ public class TunnelManager : IDisposable
             or FileNotFoundException
             or UnauthorizedAccessException)
         {
-            Log(state.Config.Name, "Configuration error - automatic reconnect disabled. Please fix the tunnel settings.");
+            Log(state.Config.Name, "配置错误 — 已禁用自动重连，请修复隧道设置。");
             return;
         }
 
         if (state.ReconnectAttempts >= 5)
         {
-            Log(state.Config.Name, "Max reconnection attempts reached, giving up");
+            Log(state.Config.Name, "已达最大重连次数，放弃重连");
             return;
         }
 
@@ -497,7 +497,7 @@ public class TunnelManager : IDisposable
         var ct = state.ReconnectCts.Token;
 
         var delay = state.ReconnectAttempts <= 3 ? 3 : 10;
-        Log(state.Config.Name, $"Reconnecting in {delay}s (attempt {state.ReconnectAttempts}/5)...");
+        Log(state.Config.Name, $"{delay} 秒后重连（第 {state.ReconnectAttempts}/5 次）…");
 
         Task.Run(async () =>
         {
@@ -513,7 +513,7 @@ public class TunnelManager : IDisposable
             catch (OperationCanceledException) { /* expected */ }
             catch (Exception ex)
             {
-                Log(state.Config.Name, $"Reconnection error: {ex.Message}");
+                Log(state.Config.Name, $"重连出错：{ex.Message}");
             }
         });
     }
@@ -526,7 +526,7 @@ public class TunnelManager : IDisposable
             {
                 if (state.Client?.IsConnected != true)
                 {
-                    Log(state.Config.Name, "Connection lost");
+                    Log(state.Config.Name, "连接已断开");
                     state.Status = TunnelStatus.Failed;
                     state.StatusMessage = "Connection lost";
                     state.ConnectedSince = null;

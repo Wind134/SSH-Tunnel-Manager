@@ -32,7 +32,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             var total = Tunnels.Count;
             var running = Tunnels.Count(t => t.Status == TunnelStatus.Connected);
-            return $"{total} tunnels | {running} running";
+            return $"{total} 条隧道 | {running} 条运行中";
         }
     }
 
@@ -113,7 +113,7 @@ public class MainViewModel : INotifyPropertyChanged
             // A corrupted config or any load failure must not crash startup.
             // Start with an empty tunnel list and let the user re-add configs.
             System.Windows.MessageBox.Show(
-                $"Failed to load saved configuration:\n{ex.Message}\n\nThe app will start with an empty configuration.",
+                $"加载已保存的配置失败：\n{ex.Message}\n\n应用将以空配置启动。",
                 "SSH Tunnel Manager",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Warning);
@@ -152,8 +152,8 @@ public class MainViewModel : INotifyPropertyChanged
         // but the .Wait() on StopTunnel (called transitively from RemoveTunnel)
         // would block the dispatcher if StopTunnel ever becomes truly async.
         var result = System.Windows.MessageBox.Show(
-            $"Delete tunnel \"{state.Config.Name}\"?",
-            "Confirm Delete",
+            $"删除隧道 \"{state.Config.Name}\"？",
+            "确认删除",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Question);
 

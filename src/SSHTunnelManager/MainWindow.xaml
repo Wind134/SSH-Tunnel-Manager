@@ -3,13 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:SSHTunnelManager.Converters"
         xmlns:svc="clr-namespace:SSHTunnelManager.Services"
-        Title="SSH Tunnel Manager"
-        Width="720" Height="600"
-        MinWidth="520" MinHeight="400"
-        WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource AppBg}"
-        TextElement.Foreground="{DynamicResource AppFg}"
-        TextElement.FontFamily="Segoe UI">
+       Title="SSH Tunnel Manager"
+       Width="720" Height="600"
+       MinWidth="520" MinHeight="400"
+       WindowStartupLocation="CenterScreen"
+       Background="{DynamicResource AppBg}"
+       TextElement.Foreground="{DynamicResource AppFg}"
+        TextElement.FontFamily="Microsoft YaHei UI">
 
     <Window.Resources>
         <conv:StatusToColorConverter x:Key="StatusToColor" />
@@ -34,10 +34,10 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Content="+ Add Tunnel" Command="{Binding AddTunnelCommand}" Padding="12,6" Margin="0,0,8,0" />
-            <Button Grid.Column="1" Content="Start All" Command="{Binding StartAllCommand}" Padding="12,6" Margin="0,0,8,0" />
-            <Button Grid.Column="2" Content="Stop All" Command="{Binding StopAllCommand}" Padding="12,6" Margin="0,0,8,0" />
-            <Button Grid.Column="4" Content="Settings" Command="{Binding SettingsCommand}" Padding="12,6" />
+            <Button Grid.Column="0" Content="+ 添加隧道" Command="{Binding AddTunnelCommand}" Padding="12,6" Margin="0,0,8,0" />
+            <Button Grid.Column="1" Content="全部启动" Command="{Binding StartAllCommand}" Padding="12,6" Margin="0,0,8,0" />
+            <Button Grid.Column="2" Content="全部停止" Command="{Binding StopAllCommand}" Padding="12,6" Margin="0,0,8,0" />
+            <Button Grid.Column="4" Content="设置" Command="{Binding SettingsCommand}" Padding="12,6" />
         </Grid>
 
         <!-- Main content -->
@@ -85,9 +85,9 @@
                                         <Run Text="{Binding Config.SshPort}" />
                                     </TextBlock>
                                     <TextBlock FontSize="11" Opacity="0.5">
-                                        <Run Text="Local:" />
+                                        <Run Text="本地：" />
                                         <Run Text="{Binding Config.LocalPort}" />
-                                        <Run Text=" -> Remote:" />
+                                        <Run Text=" → 远程：" />
                                         <Run Text="{Binding Config.RemotePort}" />
                                     </TextBlock>
                                     <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.8" />
@@ -95,21 +95,21 @@
 
                                 <!-- Action buttons -->
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="Start"
+                                    <Button Content="启动"
                                                Visibility="{Binding CanStart, Converter={StaticResource BoolToVis}}"
                                                Command="{Binding DataContext.StartTunnelCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
                                                CommandParameter="{Binding}"
                                                Margin="4,0,4,0" Padding="12,4" />
-                                    <Button Content="Stop"
+                                    <Button Content="停止"
                                                Visibility="{Binding CanStop, Converter={StaticResource BoolToVis}}"
                                                Command="{Binding DataContext.StopTunnelCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
                                                CommandParameter="{Binding}"
                                                Margin="4,0,4,0" Padding="12,4" />
-                                    <Button Content="Edit"
+                                    <Button Content="编辑"
                                                Command="{Binding DataContext.EditTunnelCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
                                                CommandParameter="{Binding}"
                                                Margin="4,0,4,0" Padding="12,4" />
-                                    <Button Content="Delete"
+                                    <Button Content="删除"
                                                Command="{Binding DataContext.DeleteTunnelCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
                                                CommandParameter="{Binding}"
                                                Margin="4,0,4,0" Padding="12,4" />
@@ -135,14 +135,14 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Log" FontWeight="SemiBold" FontSize="12" Opacity="0.7" Margin="0,0,0,4" />
+                        <TextBlock Grid.Column="0" Text="日志" FontWeight="SemiBold" FontSize="12" Opacity="0.7" Margin="0,0,0,4" />
                         <Button Grid.Column="1" Content="复制" Command="{Binding CopyLogCommand}" Padding="10,2" Margin="0,0,0,4" />
                     </Grid>
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding LogEntries}"
                              Background="Transparent"
                              BorderThickness="0"
-                             FontFamily="Consolas"
+                             FontFamily="Consolas, Microsoft YaHei UI"
                              FontSize="11" />
                 </Grid>
             </Border>
