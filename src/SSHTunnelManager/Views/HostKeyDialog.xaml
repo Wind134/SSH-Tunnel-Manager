@@ -1,13 +1,12 @@
 <Window x:Class="SSHTunnelManager.Views.HostKeyDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Host Key Confirmation"
         Width="460" Height="400"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Background="White"
         TextElement.Foreground="Black"
-        TextElement.FontFamily="Segoe UI">
+        TextElement.FontFamily="Microsoft YaHei UI">
 
     <Grid Margin="24,20,24,24">
         <Grid.RowDefinitions>
@@ -18,25 +17,25 @@
         <!-- Scrollable content so the buttons below are never pushed off-screen -->
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock Text="First-time connection to this server"
+                <TextBlock Text="首次连接到该服务器"
                            FontSize="16" FontWeight="SemiBold" Margin="0,0,0,16" />
 
                 <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="Server:" Opacity="0.7" Margin="0,0,0,4" />
+                    <TextBlock Text="服务器：" Opacity="0.7" Margin="0,0,0,4" />
                     <TextBlock x:Name="ServerText" FontFamily="Consolas" FontSize="13" Margin="0,0,0,12" />
 
-                    <TextBlock Text="Key Type:" Opacity="0.7" Margin="0,0,0,4" />
+                    <TextBlock Text="密钥类型：" Opacity="0.7" Margin="0,0,0,4" />
                     <TextBlock x:Name="AlgoText" FontFamily="Consolas" FontSize="13" Margin="0,0,0,12" />
 
-                    <TextBlock Text="Fingerprint:" Opacity="0.7" Margin="0,0,0,4" />
+                    <TextBlock Text="指纹：" Opacity="0.7" Margin="0,0,0,4" />
                     <TextBlock x:Name="FingerprintText" FontFamily="Consolas" FontSize="12"
                                TextWrapping="Wrap" Margin="0,0,0,16" />
                 </StackPanel>
 
                 <Border Padding="12" Background="#F0F0F0" CornerRadius="4">
                     <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap">
-                        Please verify this fingerprint matches the server's actual fingerprint.
-                        You can check it on the server by running:
+                        请确认该指纹与服务器的实际指纹一致。
+                        可以在服务器上执行以下命令核对：
                         ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
                     </TextBlock>
                 </Border>
@@ -45,8 +44,8 @@
 
         <!-- Action buttons: always visible at the bottom -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Reject" Click="Reject_Click" Margin="0,0,12,0" Width="100" Padding="0,6" />
-            <Button Content="Trust &amp; Save" Click="Trust_Click" Width="120" Padding="0,6" />
+            <Button Content="拒绝" Click="Reject_Click" Margin="0,0,12,0" Width="100" Padding="0,6" />
+            <Button Content="信任并保存" Click="Trust_Click" Width="120" Padding="0,6" />
         </StackPanel>
     </Grid>
 </Window>

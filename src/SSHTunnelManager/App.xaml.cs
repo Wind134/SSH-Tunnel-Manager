@@ -30,7 +30,7 @@ public partial class App : System.Windows.Application
 
         if (!createdNew)
         {
-            MessageBox.Show("SSH Tunnel Manager is already running.", "SSH Tunnel Manager",
+            MessageBox.Show("SSH Tunnel Manager 已经在运行。", "SSH Tunnel Manager",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;

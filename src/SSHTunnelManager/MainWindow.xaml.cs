@@ -58,9 +58,24 @@ public partial class MainWindow : Window
 
     private void SetupTray()
     {
+        // Use the icon embedded in the EXE (via <ApplicationIcon> in the .csproj)
+        // instead of the generic Windows SystemIcons.Application.
+       System.Drawing.Icon? appIcon = null;
+       try
+       {
+            // Assembly.Location is "" under single-file publish (.NET 6+), so
+            // Environment.ProcessPath (always the real host exe) + AppContext.BaseDirectory
+            // fallback gives a path that ExtractAssociatedIcon can actually open.
+            var exePath = System.Environment.ProcessPath
+                          ?? System.IO.Path.Combine(AppContext.BaseDirectory, "SSHTunnelManager.exe");
+            if (!string.IsNullOrEmpty(exePath))
+                appIcon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+        }
+        catch { /* fall back to default on any failure */ }
+
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = appIcon ?? SystemIcons.Application,
             Text = "SSH Tunnel Manager",
             Visible = true
         };

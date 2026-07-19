@@ -1,13 +1,13 @@
 <Window x:Class="SSHTunnelManager.Views.SettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Settings"
+        Title="设置"
         Width="400" Height="260"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{DynamicResource AppBg}"
         TextElement.Foreground="{DynamicResource AppFg}"
-        TextElement.FontFamily="Segoe UI">
+        TextElement.FontFamily="Microsoft YaHei UI">
 
     <Grid Margin="16">
         <Grid.RowDefinitions>

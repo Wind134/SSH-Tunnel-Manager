@@ -22,7 +22,7 @@ public partial class AddEditDialog : Window
 
         if (existing != null)
         {
-            Title = "Edit Tunnel";
+            Title = "编辑隧道";
             NameBox.Text = existing.Name;
             SshUserBox.Text = existing.SshUser;
 
@@ -64,14 +64,14 @@ public partial class AddEditDialog : Window
 
             if (_sshConfigEntries.Count == 0)
             {
-                SshConfigCombo.ItemsSource = new[] { new SshConfigEntry { Host = "(No SSH config found)" } };
+                SshConfigCombo.ItemsSource = new[] { new SshConfigEntry { Host = "（未找到 SSH 配置）" } };
                 SshConfigCombo.SelectedIndex = 0;
                 SshConfigCombo.IsEnabled = false;
             }
         }
         catch
         {
-            SshConfigCombo.ItemsSource = new[] { new SshConfigEntry { Host = "(Permission denied)" } };
+            SshConfigCombo.ItemsSource = new[] { new SshConfigEntry { Host = "（无权限访问）" } };
             SshConfigCombo.SelectedIndex = 0;
             SshConfigCombo.IsEnabled = false;
         }
@@ -116,7 +116,7 @@ public partial class AddEditDialog : Window
     private void ToggleHostBtn_Click(object sender, RoutedEventArgs e)
     {
         _hostVisible = !_hostVisible;
-        ToggleHostBtn.Content = _hostVisible ? "Hide" : "Show";
+        ToggleHostBtn.Content = _hostVisible ? "隐藏" : "显示";
     }
 
     private void BrowseKey_Click(object sender, RoutedEventArgs e)
@@ -124,7 +124,7 @@ public partial class AddEditDialog : Window
         var ofd = new OpenFileDialog
         {
             Filter = "Private Key Files (*.pem;*.ppk;id_*;*)|*.*",
-            Title = "Select Private Key File"
+            Title = "选择私钥文件"
         };
 
         if (ofd.ShowDialog() == true)
@@ -138,19 +138,19 @@ public partial class AddEditDialog : Window
     {
         if (string.IsNullOrWhiteSpace(NameBox.Text))
         {
-            MessageBox.Show("Name cannot be empty.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("名称不能为空。", "校验", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(SshUserBox.Text))
         {
-            MessageBox.Show("SSH user cannot be empty.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("SSH 用户名不能为空。", "校验", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(HostBox.Password))
         {
-            MessageBox.Show("SSH address cannot be empty.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("SSH 地址不能为空。", "校验", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -161,14 +161,14 @@ public partial class AddEditDialog : Window
             var keyPath = KeyFileBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(keyPath))
             {
-                MessageBox.Show("Please select a private key file, or switch to password auth.",
-                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("请选择私钥文件，或切换到密码认证。",
+                    "校验", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (!File.Exists(keyPath))
             {
-                MessageBox.Show($"Private key file not found:\n{keyPath}",
-                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"找不到私钥文件：\n{keyPath}",
+                    "校验", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             try
@@ -178,10 +178,10 @@ public partial class AddEditDialog : Window
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"No permission to read the key file:\n{keyPath}\n\n{ex.Message}\n\n" +
-                    "Grant your account Read permission (Properties → Security), or run:\n" +
+                    $"无法读取私钥文件：\n{keyPath}\n\n{ex.Message}\n\n" +
+                    "请为当前账户授予读取权限（属性 → 安全），或在 PowerShell 中执行：\n" +
                     $"icacls \"{keyPath}\" /grant:r \"%USERNAME%:R\"",
-                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    "校验", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
         }
@@ -226,8 +226,35 @@ public partial class AddEditDialog : Window
 
         if (_editing != null)
         {
-            config.HostKeyFingerprint = _editing.HostKeyFingerprint;
-            config.HostKeyTrust = _editing.HostKeyTrust;
+            // If the user changed the SSH host, the previously trusted
+            // fingerprint no longer applies — the next connect must
+            // re-prompt for the host key. Otherwise we'd either silently
+            // trust a different server, or auto-reconnect into a rejection
+            // loop because Trust != Unknown never re-prompts the user.
+            bool hostChanged;
+            try
+            {
+                var oldHost = CryptoHelper.Decrypt(_editing.EncryptedHost);
+                hostChanged = !string.Equals(
+                    oldHost, host, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                // Couldn't read the old host back (corrupt config, etc.):
+                // be safe and force a fresh verification.
+                hostChanged = true;
+            }
+
+            if (hostChanged)
+            {
+                config.HostKeyFingerprint = string.Empty;
+                config.HostKeyTrust = HostKeyTrust.Unknown;
+            }
+            else
+            {
+                config.HostKeyFingerprint = _editing.HostKeyFingerprint;
+                config.HostKeyTrust = _editing.HostKeyTrust;
+            }
         }
 
         return config;

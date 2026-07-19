@@ -6,6 +6,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyTitle>SSH Tunnel Manager</AssemblyTitle>
     <Company>AI开发工具</Company>
     <Product>SSH Tunnel Manager</Product>
