@@ -92,7 +92,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnLogMessage(string tunnelName, string message)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
             LogEntries.Insert(0, message);
             if (LogEntries.Count > 200)

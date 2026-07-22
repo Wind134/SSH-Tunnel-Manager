@@ -1,0 +1,124 @@
+<UserControl x:Class="HandleViewer.MainView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:HandleViewer.Models"
+        Background="WhiteSmoke"
+        TextElement.Foreground="Black"
+        TextElement.FontFamily="Microsoft YaHei UI">
+
+    <UserControl.Resources>
+        <Style x:Key="StateDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="#888" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Listener">
+                    <Setter Property="Fill" Value="#12B88E" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Established">
+                    <Setter Property="Fill" Value="#1C7ED6" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="CenteredComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="0,4" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" Margin="12,10,12,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Name="RefreshBtn" Content="刷新" Click="Refresh_Click"
+                    Padding="14,6" Margin="0,0,8,0" />
+            <ComboBox Grid.Column="1" Name="KindFilter" Width="110" Margin="0,0,8,0"
+                      SelectedIndex="0" SelectionChanged="Filter_Changed"
+                      HorizontalContentAlignment="Center"
+                      VerticalContentAlignment="Center">
+                <ComboBoxItem Content="全部" Tag="All" Style="{StaticResource CenteredComboBoxItem}" />
+                <ComboBoxItem Content="仅监听" Tag="Listener" Style="{StaticResource CenteredComboBoxItem}" />
+                <ComboBoxItem Content="仅连接" Tag="Established" Style="{StaticResource CenteredComboBoxItem}" />
+            </ComboBox>
+            <ComboBox Grid.Column="2" Name="FamilyFilter" Width="90" Margin="0,0,8,0"
+                      SelectedIndex="0" SelectionChanged="Filter_Changed"
+                      HorizontalContentAlignment="Center"
+                      VerticalContentAlignment="Center">
+                <ComboBoxItem Content="全部协议" Tag="All" Style="{StaticResource CenteredComboBoxItem}" />
+                <ComboBoxItem Content="IPv4" Tag="IPv4" Style="{StaticResource CenteredComboBoxItem}" />
+                <ComboBoxItem Content="IPv6" Tag="IPv6" Style="{StaticResource CenteredComboBoxItem}" />
+            </ComboBox>
+            <TextBox Grid.Column="3" Name="SearchBox"
+                     Padding="8,4" VerticalContentAlignment="Center"
+                     ToolTip="按端口号、进程名或 PID 过滤"
+                     TextChanged="Filter_Changed" />
+            <TextBlock Grid.Column="4" Text="系统进程" VerticalAlignment="Center" Margin="8,0,4,0" Opacity="0.7" />
+            <CheckBox Grid.Column="5" Name="ShowSystem" VerticalAlignment="Center"
+                      IsChecked="True" Checked="Filter_Changed" Unchecked="Filter_Changed" />
+        </Grid>
+
+        <!-- Table -->
+        <DataGrid Grid.Row="1" Name="Grid"
+                  Margin="12,0,12,8"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  BorderBrush="LightGray"
+                  RowBackground="White"
+                  AlternatingRowBackground="#FAFAFA"
+                  CanUserSortColumns="True"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  ColumnHeaderHeight="28"
+                  RowHeight="24">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="打开所在目录" Click="OpenDirectory_Click" />
+                    <MenuItem Header="终止进程" Click="KillProcess_Click" />
+                    <Separator />
+                    <MenuItem Header="复制行信息" Click="CopyRow_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="" Width="32" SortMemberPath="Kind" CanUserResize="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate DataType="{x:Type models:PortOccupant}">
+                            <Ellipse Style="{StaticResource StateDot}" Margin="8,0,0,0" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="状态" Width="Auto" Binding="{Binding State}" />
+                <DataGridTextColumn Header="协议" Width="Auto" Binding="{Binding Family}" />
+                <DataGridTextColumn Header="本地地址" Width="Auto" Binding="{Binding LocalAddress}" />
+                <DataGridTextColumn Header="本地端口" Width="Auto" Binding="{Binding LocalPort}" />
+                <DataGridTextColumn Header="远程地址" Width="Auto" Binding="{Binding RemoteAddress}" />
+                <DataGridTextColumn Header="远程端口" Width="Auto" Binding="{Binding RemotePort, TargetNullValue=—}" />
+                <DataGridTextColumn Header="PID" Width="Auto" Binding="{Binding Pid}" />
+                <DataGridTextColumn Header="进程名" Width="Auto" Binding="{Binding ProcessName}" />
+                <DataGridTextColumn Header="可执行路径" Width="*" Binding="{Binding ProcessPath}" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status bar -->
+        <Border Grid.Row="2" Padding="12,6,12,8" BorderBrush="LightGray" BorderThickness="0,1,0,0">
+            <TextBlock Name="StatusText" FontSize="12" Opacity="0.75" />
+        </Border>
+    </Grid>
+</UserControl>
