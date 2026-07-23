@@ -1,0 +1,55 @@
+# Auto-build and publish a GitHub Release when a version tag (v*) is pushed.
+# The compiled self-contained exe is zipped and attached to the release.
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # Allow manual trigger from the Actions tab
+
+permissions:
+  contents: write # Needed to create the release and upload assets
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish TinyTools (self-contained, single-file)
+        run: |
+          dotnet publish src/TinyTools/TinyTools.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableWindowsTargeting=true `
+            -o publish
+
+      - name: Zip artifact
+        shell: pwsh
+        run: |
+          $tag = ${{ github.ref_name }}
+          if ($tag -eq '') { $tag = 'dev' }
+          $zipName = "TinyTools-$tag-win-x64.zip"
+          Compress-Archive -Path publish\* -DestinationPath $zipName
+          Write-Host "Created $zipName"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: TinyTools-*-win-x64.zip
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

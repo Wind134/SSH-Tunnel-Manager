@@ -10,7 +10,10 @@
             <SolidColorBrush x:Key="AppFg" Color="Black" />
             <SolidColorBrush x:Key="PanelBg" Color="#F5F5F5" />
             <SolidColorBrush x:Key="BorderCol" Color="LightGray" />
-            <SolidColorBrush x:Key="MutedFg" Color="#555555" />
+           <SolidColorBrush x:Key="MutedFg" Color="#555555" />
+           <SolidColorBrush x:Key="GridBg" Color="White" />
+           <SolidColorBrush x:Key="GridAltBg" Color="#FAFAFA" />
+           <SolidColorBrush x:Key="GridBorder" Color="LightGray" />
 
             <Style TargetType="Button">
                 <Setter Property="MinWidth" Value="60" />
