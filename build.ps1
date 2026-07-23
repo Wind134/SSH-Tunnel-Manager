@@ -4,7 +4,11 @@
 param(
     [string]$Configuration = "Release",
     [string]$OutputDir = "publish",
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$Installer,
+    [string]$InstallerVersion = "",
+    [string]$InstallerOutputDir = "",
+    [string]$InstallerCompilerPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -69,4 +73,25 @@ if (Test-Path $exePath) {
 } else {
     Write-Host "=== Build Failed ===" -ForegroundColor Red
     exit 1
+}
+
+if ($Installer) {
+    if ([string]::IsNullOrWhiteSpace($InstallerVersion)) {
+        [xml]$projectXml = Get-Content (Join-Path $projectDir "TinyTools.csproj") -Raw -Encoding UTF8
+        $InstallerVersion = [string]$projectXml.Project.PropertyGroup.Version
+    }
+
+    $installerArgs = @{
+        Version = $InstallerVersion
+        PublishDir = $publishDir
+    }
+    if (-not [string]::IsNullOrWhiteSpace($InstallerOutputDir)) {
+        $installerArgs.OutputDir = $InstallerOutputDir
+    }
+    if (-not [string]::IsNullOrWhiteSpace($InstallerCompilerPath)) {
+        $installerArgs.IsccPath = $InstallerCompilerPath
+    }
+
+    Write-Host ""
+    & (Join-Path $PSScriptRoot "installer\build-installer.ps1") @installerArgs
 }

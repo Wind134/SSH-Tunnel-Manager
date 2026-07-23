@@ -48,18 +48,59 @@ jobs:
           Compress-Archive -Path publish\* -DestinationPath $zipName
           Write-Host "Created $zipName"
 
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: |
+          $url = "https://github.com/jrsoftware/issrc/releases/download/is-7_0_2/innosetup-7.0.2-x64.exe"
+          $expectedHash = "5ad54ca3def786f8f4212552e54cc6d8d61329e2d24a1cfee0571d42c2684ff1"
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup-7.0.2-x64.exe"
+          $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $actualHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $expectedHash) {
+            throw "Inno Setup SHA-256 mismatch: $actualHash"
+          }
+          Start-Process -FilePath $installer -Wait -ArgumentList @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/SP-",
+            "/DIR=$installDir"
+          )
+          if (-not (Test-Path (Join-Path $installDir "ISCC.exe"))) {
+            throw "ISCC.exe was not installed."
+          }
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = if ("${{ github.ref_type }}" -eq "tag") {
+            "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            ([xml](Get-Content "src/TinyTools/TinyTools.csproj" -Raw -Encoding UTF8)).Project.PropertyGroup.Version
+          }
+          ./installer/build-installer.ps1 `
+            -Version $version `
+            -PublishDir "$PWD/publish" `
+            -OutputDir "$PWD/installer-output" `
+            -IsccPath "$env:RUNNER_TEMP/InnoSetup/ISCC.exe"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: TinyTools-win-x64
-          path: TinyTools-*-win-x64.zip
+          path: |
+            TinyTools-*-win-x64.zip
+            installer-output/TinyTools-*-win-x64-Setup.exe
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: TinyTools-*-win-x64.zip
+          files: |
+            TinyTools-*-win-x64.zip
+            installer-output/TinyTools-*-win-x64-Setup.exe
           draft: false
           prerelease: ${{ contains(github.ref_name, '-rc') }}
         env:

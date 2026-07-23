@@ -54,6 +54,14 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 powershell -ExecutionPolicy Bypass -File .\build.ps1 -SkipTests
 ```
 
+安装 Inno Setup 7 后，还可以同时生成 Windows 安装程序：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Installer
+```
+
+安装程序默认输出到 `artifacts\installer`，采用当前用户安装模式，不需要管理员权限。它会创建开始菜单快捷方式，并允许用户选择是否创建桌面快捷方式。覆盖安装和卸载不会主动删除运行时生成的 `data` 配置目录。
+
 也可以分别运行：
 
 ```powershell
@@ -79,7 +87,7 @@ data/
 
 ## 发布
 
-推送 `v*` 标签后，[GitHub Actions](.github/workflows/release.yml) 会运行测试、生成 `TinyTools-<版本>-win-x64.zip` 并创建 GitHub Release。手动运行工作流只生成可下载的构建产物，不创建 Release。
+推送 `v*` 标签后，[GitHub Actions](.github/workflows/release.yml) 会运行测试，并同时生成便携版 `TinyTools-<版本>-win-x64.zip` 与安装版 `TinyTools-<版本>-win-x64-Setup.exe`，随后创建 GitHub Release。手动运行工作流只生成可下载的构建产物，不创建 Release。
 
 ## 当前状态
 
