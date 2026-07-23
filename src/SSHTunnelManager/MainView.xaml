@@ -28,12 +28,10 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="+ 添加隧道" Command="{Binding AddTunnelCommand}" Padding="12,6" Margin="0,0,8,0" />
             <Button Grid.Column="1" Content="全部启动" Command="{Binding StartAllCommand}" Padding="12,6" Margin="0,0,8,0" />
             <Button Grid.Column="2" Content="全部停止" Command="{Binding StopAllCommand}" Padding="12,6" Margin="0,0,8,0" />
-            <Button Grid.Column="4" Content="设置" Command="{Binding SettingsCommand}" Padding="12,6" />
         </Grid>
 
         <!-- Main content -->

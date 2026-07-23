@@ -34,7 +34,7 @@ public class StatusToColorConverter : IValueConverter
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotImplementedException();
+        => Binding.DoNothing;
 }
 
 public class StatusToDotConverter : IValueConverter
@@ -57,7 +57,7 @@ public class StatusToDotConverter : IValueConverter
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotImplementedException();
+        => Binding.DoNothing;
 }
 
 public class BoolToVisibilityConverter : IValueConverter
@@ -66,7 +66,7 @@ public class BoolToVisibilityConverter : IValueConverter
         => (value is bool b && b) ? Visibility.Visible : Visibility.Collapsed;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotImplementedException();
+        => Binding.DoNothing;
 }
 
 public class InverseBoolToVisibilityConverter : IValueConverter
@@ -75,5 +75,5 @@ public class InverseBoolToVisibilityConverter : IValueConverter
         => (value is bool b && !b) ? Visibility.Visible : Visibility.Collapsed;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotImplementedException();
+        => Binding.DoNothing;
 }

@@ -9,6 +9,7 @@ public partial class MainView : System.Windows.Controls.UserControl
     private readonly MainViewModel _viewModel;
     private readonly TunnelManager _tunnelManager;
     private readonly ConfigStorage _configStorage;
+    private bool _initialized;
 
     public MainView()
     {
@@ -24,8 +25,11 @@ public partial class MainView : System.Windows.Controls.UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (_initialized)
+            return;
+        _initialized = true;
+
         _viewModel.Initialize();
-        ThemeHelper.Apply(_viewModel.Settings.Theme);
 
         _tunnelManager.ConfigChanged += () => Dispatcher.Invoke(_viewModel.SaveConfig);
 

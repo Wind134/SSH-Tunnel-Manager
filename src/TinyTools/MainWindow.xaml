@@ -24,14 +24,15 @@
                            Margin="16,0,16,16" />
 
                 <!-- Nav buttons -->
-                <StackPanel Margin="4,0,4,8">
+                <StackPanel DockPanel.Dock="Top" Margin="4,0,4,8">
                     <Button x:Name="NavTunnel" Style="{StaticResource NavButtonActive}" Content="SSH 隧道管理" Click="Nav_Click" />
                     <Button x:Name="NavHandle" Style="{StaticResource NavButton}" Content="句柄查看器" Click="Nav_Click" />
                 </StackPanel>
 
-                <!-- Spacer + exit at bottom -->
+                <!-- Global actions at bottom -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="4,0,4,12">
-                    <Button Content="退出" Click="Exit_Click" Padding="16,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                    <Button Content="设置" Click="Settings_Click" Style="{StaticResource NavButton}" />
+                    <Button Content="退出" Click="Exit_Click" Style="{StaticResource NavButton}" />
                 </StackPanel>
                 <Border />
             </DockPanel>

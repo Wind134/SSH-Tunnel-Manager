@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Data;
+using System.Windows.Threading;
 using HandleViewer.Models;
 using HandleViewer.Services;
 
@@ -17,6 +18,8 @@ public partial class MainView : UserControl
     private bool _initialized;
     private CancellationTokenSource? _portReloadCts;
     private CancellationTokenSource? _fileLockCts;
+    private readonly DispatcherTimer _autoRefreshTimer = new();
+    private int _autoRefreshSeconds;
 
     private static readonly HashSet<int> SystemPids = new() { 0, 4 };
 
@@ -36,9 +39,38 @@ public partial class MainView : UserControl
         _initialized = true;
         Grid.ItemsSource = _view;
         Loaded += OnLoaded;
+        Unloaded += (_, _) => _autoRefreshTimer.Stop();
+        _autoRefreshTimer.Tick += (_, _) =>
+        {
+            if (IsVisible)
+                Reload();
+        };
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e) => Reload();
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Reload();
+        UpdateAutoRefreshTimer();
+    }
+
+    public void ApplySettings(int autoRefreshSeconds, bool showSystemProcesses)
+    {
+        _autoRefreshSeconds = Math.Max(0, autoRefreshSeconds);
+        ShowSystem.IsChecked = showSystemProcesses;
+        _view?.Refresh();
+        UpdateStatus();
+        UpdateAutoRefreshTimer();
+    }
+
+    private void UpdateAutoRefreshTimer()
+    {
+        _autoRefreshTimer.Stop();
+        if (_autoRefreshSeconds <= 0 || !IsLoaded)
+            return;
+
+        _autoRefreshTimer.Interval = TimeSpan.FromSeconds(_autoRefreshSeconds);
+        _autoRefreshTimer.Start();
+    }
 
     // --- Port tab ---
 
