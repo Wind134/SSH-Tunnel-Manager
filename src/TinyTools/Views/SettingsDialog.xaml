@@ -1,0 +1,192 @@
+<Window x:Class="TinyTools.Views.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TinyTools 设置"
+        Width="560" Height="560"
+        MinWidth="520" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppBg}"
+        TextElement.Foreground="{DynamicResource AppFg}"
+        TextElement.FontFamily="Microsoft YaHei UI">
+
+    <Window.Resources>
+        <Style x:Key="SettingsSection" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderCol}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="SettingsHeading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+        <Style x:Key="SettingsHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedFg}" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="20,8" />
+            <Setter Property="Foreground" Value="{DynamicResource AppFg}" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="22,18,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="管理 TinyTools 的通用行为和工具偏好"
+                       Foreground="{DynamicResource MutedFg}" Margin="0,3,0,0" />
+        </StackPanel>
+
+        <TabControl Grid.Row="1" Background="Transparent"
+                    BorderBrush="{DynamicResource BorderCol}">
+            <TabItem Header="常规">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+                    <StackPanel>
+                        <Border Style="{StaticResource SettingsSection}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="190" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                                           Text="启动与退出" Style="{StaticResource SettingsHeading}" />
+
+                                <StackPanel Grid.Row="1" Margin="0,2,12,12">
+                                    <TextBlock Text="启动页面" />
+                                    <TextBlock Text="打开 TinyTools 时首先显示的工具"
+                                               Style="{StaticResource SettingsHint}" />
+                                </StackPanel>
+                                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="StartPageBox"
+                                          Height="28" VerticalAlignment="Top">
+                                    <ComboBoxItem Content="上次使用的页面" Tag="LastUsed" />
+                                    <ComboBoxItem Content="SSH 隧道管理" Tag="Tunnel" />
+                                    <ComboBoxItem Content="句柄查看器" Tag="HandleViewer" />
+                                </ComboBox>
+
+                                <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
+                                          x:Name="AutoStartMinimizedBox"
+                                          Content="启动时最小化到系统托盘" Margin="0,5" />
+                                <CheckBox Grid.Row="3" Grid.ColumnSpan="2"
+                                          x:Name="MinimizeToTrayBox"
+                                          Content="关闭主窗口时最小化到托盘" Margin="0,5" />
+                                <CheckBox Grid.Row="4" Grid.ColumnSpan="2"
+                                          x:Name="ConfirmBeforeExitBox"
+                                          Content="退出 TinyTools 前要求确认" Margin="0,5" />
+                                <CheckBox Grid.Row="5" Grid.ColumnSpan="2"
+                                          x:Name="ShowTrayNotificationsBox"
+                                          Content="最小化到托盘时显示通知" Margin="0,5,0,0" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsSection}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="190" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="外观" Style="{StaticResource SettingsHeading}" />
+                                    <TextBlock Text="保存后立即应用到全部工具"
+                                               Style="{StaticResource SettingsHint}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" x:Name="ThemeBox"
+                                          Height="28" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="跟随系统" Tag="System" />
+                                    <ComboBoxItem Content="浅色" Tag="Light" />
+                                    <ComboBoxItem Content="深色" Tag="Dark" />
+                                </ComboBox>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="工具">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+                    <StackPanel>
+                        <Border Style="{StaticResource SettingsSection}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="190" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                                           Text="句柄查看器" Style="{StaticResource SettingsHeading}" />
+                                <StackPanel Grid.Row="1" Margin="0,2,12,12">
+                                    <TextBlock Text="端口列表自动刷新" />
+                                    <TextBlock Text="仅在句柄查看器可见时刷新"
+                                               Style="{StaticResource SettingsHint}" />
+                                </StackPanel>
+                                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="PortRefreshBox"
+                                          Height="28" VerticalAlignment="Top">
+                                    <ComboBoxItem Content="手动刷新" Tag="0" />
+                                    <ComboBoxItem Content="每 5 秒" Tag="5" />
+                                    <ComboBoxItem Content="每 10 秒" Tag="10" />
+                                    <ComboBoxItem Content="每 30 秒" Tag="30" />
+                                    <ComboBoxItem Content="每 60 秒" Tag="60" />
+                                </ComboBox>
+                                <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
+                                          x:Name="ShowSystemProcessesBox"
+                                          Content="默认显示系统进程（PID 0/4）" Margin="0,5,0,0" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsSection}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="数据与维护" Style="{StaticResource SettingsHeading}" />
+                                    <TextBlock Text="查看配置、备份和崩溃日志"
+                                               Style="{StaticResource SettingsHint}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="打开数据目录" Padding="14,7"
+                                        VerticalAlignment="Center"
+                                        Click="OpenDataDirectory_Click" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Button Content="恢复默认设置" Padding="14,7"
+                    HorizontalAlignment="Left" Click="Reset_Click" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="保存" Width="88" Padding="0,7" Margin="0,0,8,0"
+                        IsDefault="True" Click="Save_Click" />
+                <Button Content="取消" Width="88" Padding="0,7" IsCancel="True" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

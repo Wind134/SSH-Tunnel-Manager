@@ -1,17 +1,22 @@
-# Build script for SSH Tunnel Manager
+# Build script for TinyTools
 # Usage: powershell -ExecutionPolicy Bypass -File build.ps1
 
 param(
     [string]$Configuration = "Release",
-    [string]$OutputDir = "publish"
+    [string]$OutputDir = "publish",
+    [switch]$SkipTests
 )
 
 $ErrorActionPreference = "Stop"
 
-$projectDir = Join-Path $PSScriptRoot "src\SSHTunnelManager"
-$publishDir = Join-Path $projectDir $OutputDir
+$projectDir = Join-Path $PSScriptRoot "src\TinyTools"
+$publishDir = if ([System.IO.Path]::IsPathRooted($OutputDir)) {
+    [System.IO.Path]::GetFullPath($OutputDir)
+} else {
+    Join-Path $projectDir $OutputDir
+}
 
-Write-Host "=== SSH Tunnel Manager Build ===" -ForegroundColor Cyan
+Write-Host "=== TinyTools Build ===" -ForegroundColor Cyan
 Write-Host "Configuration: $Configuration"
 Write-Host "Project: $projectDir"
 
@@ -31,18 +36,30 @@ try {
 
 Write-Host ""
 Write-Host "Restoring packages..." -ForegroundColor Cyan
-Push-Location $projectDir
-dotnet restore
-if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Restore failed." -ForegroundColor Red; exit 1 }
+dotnet restore (Join-Path $projectDir "TinyTools.csproj")
+if ($LASTEXITCODE -ne 0) { Write-Host "Restore failed." -ForegroundColor Red; exit 1 }
+
+if (-not $SkipTests) {
+    $testProject = Join-Path $PSScriptRoot "tests\TinyTools.Tests\TinyTools.Tests.csproj"
+    if (Test-Path $testProject) {
+        Write-Host ""
+        Write-Host "Running tests..." -ForegroundColor Cyan
+        dotnet test $testProject -c $Configuration
+        if ($LASTEXITCODE -ne 0) { Write-Host "Tests failed." -ForegroundColor Red; exit 1 }
+    }
+}
 
 Write-Host ""
 Write-Host "Publishing..." -ForegroundColor Cyan
-dotnet publish -c $Configuration -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableWindowsTargeting=true -o $publishDir
+dotnet publish (Join-Path $projectDir "TinyTools.csproj") -c $Configuration -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableWindowsTargeting=true -p:DebugType=None -p:DebugSymbols=false -o $publishDir
 
-if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Publish failed." -ForegroundColor Red; exit 1 }
-Pop-Location
+if ($LASTEXITCODE -ne 0) { Write-Host "Publish failed." -ForegroundColor Red; exit 1 }
 
-$exePath = Join-Path $publishDir "SSHTunnelManager.exe"
+# Do not ship stale PDB files when reusing an existing output directory.
+Get-ChildItem -Path $publishDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
+    Remove-Item -Force
+
+$exePath = Join-Path $publishDir "TinyTools.exe"
 Write-Host ""
 if (Test-Path $exePath) {
     $size = (Get-Item $exePath).Length / 1MB

@@ -12,7 +12,6 @@ public class MainViewModel : INotifyPropertyChanged
 {
     private readonly TunnelManager _tunnelManager;
     private readonly ConfigStorage _configStorage;
-    private AppSettings _settings = new();
     private string _logText = string.Empty;
     private TunnelState? _selectedTunnel;
 
@@ -43,10 +42,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand StopTunnelCommand { get; }
     public ICommand StartAllCommand { get; }
     public ICommand StopAllCommand { get; }
-    public ICommand SettingsCommand { get; }
     public ICommand CopyLogCommand { get; }
-
-    public AppSettings Settings => _settings;
 
     public MainViewModel(TunnelManager tunnelManager, ConfigStorage configStorage)
     {
@@ -77,7 +73,6 @@ public class MainViewModel : INotifyPropertyChanged
             async _ => await _tunnelManager.StartAllAsync());
         StopAllCommand = new RelayCommand(_ => Tunnels.Any(t => t.Status is TunnelStatus.Connected or TunnelStatus.Connecting),
             async _ => await _tunnelManager.StopAllAsync());
-        SettingsCommand = new RelayCommand(_ => true, _ => OpenSettings());
         CopyLogCommand = new RelayCommand(_ => LogEntries.Count > 0, _ => CopyLog());
     }
 
@@ -92,7 +87,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnLogMessage(string tunnelName, string message)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
             LogEntries.Insert(0, message);
             if (LogEntries.Count > 200)
@@ -105,7 +100,6 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             var config = ConfigStorage.Load();
-            _settings = config.Settings ?? new AppSettings();
             _tunnelManager.Initialize(config.Tunnels);
         }
         catch (Exception ex)
@@ -167,25 +161,14 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void SaveConfig()
     {
+        var existing = ConfigStorage.Load();
         var config = new ConfigFile
         {
             Version = 2,
             Tunnels = _tunnelManager.TunnelStates.Select(s => s.Config).ToList(),
-            Settings = _settings
+            Settings = existing.Settings ?? new AppSettings()
         };
         ConfigStorage.Save(config);
-    }
-
-    private void OpenSettings()
-    {
-        var dialog = new Views.SettingsDialog(_settings);
-        dialog.Owner = System.Windows.Application.Current.MainWindow;
-        if (dialog.ShowDialog() == true)
-        {
-            _settings = dialog.GetSettings();
-            SaveConfig();
-            ThemeHelper.Apply(_settings.Theme);
-        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

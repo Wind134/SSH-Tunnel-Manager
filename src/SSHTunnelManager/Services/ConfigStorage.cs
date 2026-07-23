@@ -109,5 +109,12 @@ public class ConfigStorage
         File.Move(s_tmpPath, s_configPath, overwrite: true);
     }
 
+    public static void SaveSettings(AppSettings settings)
+    {
+        var config = Load();
+        config.Settings = settings;
+        Save(config);
+    }
+
     public static string GetConfigPath() => s_configPath;
 }

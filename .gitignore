@@ -109,6 +109,10 @@ config.json.tmp
 data/
 **/data/
 
+ # Runtime crash logs
+ crash.log
+ **/crash.log
+ 
 # Internal tooling scratch dirs
 .workbuddy/
 .agents/
