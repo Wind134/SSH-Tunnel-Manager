@@ -8,6 +8,12 @@ using SSHTunnelManager.Models;
 
 namespace SSHTunnelManager.Services;
 
+public sealed record HostKeyConfirmationRequest(
+    TunnelState State,
+    string Fingerprint,
+    string Algorithm,
+    bool IsChangedKey);
+
 public class TunnelState : INotifyPropertyChanged
 {
     private TunnelStatus _status = TunnelStatus.Disconnected;
@@ -86,6 +92,11 @@ public class TunnelState : INotifyPropertyChanged
         {
             MaskedHost = "***";
         }
+
+        OnPropertyChanged(nameof(MaskedHost));
+        // Bindings such as Config.Name and Config.LocalPort need the parent
+        // notification because TunnelConfig intentionally remains UI-neutral.
+        OnPropertyChanged(nameof(Config));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -153,6 +164,8 @@ public class TunnelManager : IDisposable
             state.Config.EncryptedHost = config.EncryptedHost;
             state.Config.EncryptedPassword = config.EncryptedPassword;
             state.Config.KeyFilePath = config.KeyFilePath;
+            state.Config.HostKeyFingerprint = config.HostKeyFingerprint;
+            state.Config.HostKeyTrust = config.HostKeyTrust;
             state.Config.AutoReconnect = config.AutoReconnect;
             state.Config.ModifiedAt = DateTime.Now;
             state.UpdateMaskedHost();
@@ -286,12 +299,31 @@ public class TunnelManager : IDisposable
                 // First-time (Unknown) or the trusted fingerprint no longer matches.
                 // Both need explicit user confirmation; persist the result either way
                 // so we don't keep nagging on every reconnect attempt.
-                if (config.HostKeyTrust == HostKeyTrust.Trusted)
+                bool isChangedKey = config.HostKeyTrust == HostKeyTrust.Trusted;
+                if (isChangedKey)
                     Log(name, "警告：已保存的指纹与服务器提供的指纹不一致");
                 Log(name, $"主机密钥指纹：{e.HostKeyName} {fingerprintHex}");
 
                 state.Status = TunnelStatus.HostKeyPending;
-                bool trust = OnHostKeyReceived?.Invoke(state, fingerprintHex, e.HostKeyName) ?? false;
+                bool trust = false;
+                try
+                {
+                    var request = new HostKeyConfirmationRequest(
+                        state, fingerprintHex, e.HostKeyName, isChangedKey);
+                    trust = HostKeyConfirmationRequested?
+                        .Invoke(request, ct)
+                        .GetAwaiter()
+                        .GetResult() ?? false;
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    trust = false;
+                }
+                catch (Exception ex)
+                {
+                    Log(name, $"主机密钥确认失败：{ex.Message}");
+                    trust = false;
+                }
 
                 if (trust)
                 {
@@ -537,7 +569,12 @@ public class TunnelManager : IDisposable
         LogMessage?.Invoke(tunnelName, $"[{timestamp}] {tunnelName} -> {message}");
     }
 
-    public event Func<TunnelState, string, string, bool>? OnHostKeyReceived;
+    /// <summary>
+    /// Raised from the SSH connection worker when user confirmation is required.
+    /// UI layers may asynchronously marshal the request to their dispatcher.
+    /// </summary>
+    public event Func<HostKeyConfirmationRequest, CancellationToken, Task<bool>>?
+        HostKeyConfirmationRequested;
 
     public void Dispose()
     {

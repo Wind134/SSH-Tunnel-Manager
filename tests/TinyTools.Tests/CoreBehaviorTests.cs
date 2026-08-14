@@ -7,6 +7,7 @@ using SSHTunnelManager.Services;
 
 namespace TinyTools.Tests;
 
+[Collection("Config storage")]
 public class CoreBehaviorTests
 {
     [Fact]
@@ -14,6 +15,74 @@ public class CoreBehaviorTests
     {
         Assert.Equal("TinyTools.Core", typeof(TunnelConfig).Assembly.GetName().Name);
         Assert.Equal("TinyTools.Core", typeof(HandleViewer.Models.PortOccupant).Assembly.GetName().Name);
+    }
+
+    [Fact]
+    public void HostKeyConfirmationUsesAsyncUiNeutralContract()
+    {
+        var eventInfo = typeof(TunnelManager).GetEvent(nameof(TunnelManager.HostKeyConfirmationRequested));
+
+        Assert.NotNull(eventInfo);
+        Assert.Equal(
+            typeof(Func<HostKeyConfirmationRequest, CancellationToken, Task<bool>>),
+            eventInfo!.EventHandlerType);
+    }
+
+    [Fact]
+    public void ConfigStorageUsesExecutableDirectoryForSingleFileDurability()
+    {
+        string originalPath = ConfigStorage.GetConfigPath();
+        string executableDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            ConfigStorage.ConfigureExecutablePath(
+                Path.Combine(executableDirectory, "TinyTools.WinUI.exe"));
+
+            Assert.Equal(
+                Path.Combine(executableDirectory, "data", "config.json"),
+                ConfigStorage.GetConfigPath());
+        }
+        finally
+        {
+            string originalDirectory = Directory.GetParent(originalPath)!.Parent!.FullName;
+            ConfigStorage.ConfigureExecutablePath(
+                Path.Combine(originalDirectory, "testhost.exe"));
+        }
+    }
+
+    [Fact]
+    public async Task TunnelManagerSupportsUiIndependentCrudLifecycle()
+    {
+        using var manager = new TunnelManager();
+        var first = new TunnelConfig
+        {
+            Name = "first",
+            EncryptedHost = CryptoHelper.Encrypt("127.0.0.1"),
+        };
+        manager.Initialize([first]);
+
+        var state = Assert.Single(manager.TunnelStates);
+        Assert.Equal("first", state.Config.Name);
+
+        var updated = first.Clone();
+        updated.Name = "updated";
+        updated.HostKeyFingerprint = "SHA256:replacement";
+        updated.HostKeyTrust = HostKeyTrust.Trusted;
+        manager.UpdateTunnel(updated);
+        Assert.Equal("updated", state.Config.Name);
+        Assert.Equal("SHA256:replacement", state.Config.HostKeyFingerprint);
+        Assert.Equal(HostKeyTrust.Trusted, state.Config.HostKeyTrust);
+
+        var second = new TunnelConfig
+        {
+            Name = "second",
+            EncryptedHost = CryptoHelper.Encrypt("127.0.0.1"),
+        };
+        manager.AddTunnel(second);
+        Assert.Equal(2, manager.TunnelStates.Count);
+
+        await manager.RemoveTunnelAsync(second.Id);
+        Assert.Single(manager.TunnelStates);
     }
 
     [Fact]

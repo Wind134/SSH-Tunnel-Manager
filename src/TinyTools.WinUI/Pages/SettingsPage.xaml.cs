@@ -1,32 +1,72 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using SSHTunnelManager.Models;
 using SSHTunnelManager.Services;
 
 namespace TinyTools.WinUI.Pages;
 
 public sealed partial class SettingsPage : Page
 {
-    private bool _loaded;
-
     public SettingsPage()
     {
         InitializeComponent();
-        string theme = ConfigStorage.Load().Settings.Theme;
-        ThemeBox.SelectedIndex = theme switch { "Light" => 1, "Dark" => 2, _ => 0 };
-        ApplyTheme(theme);
-        _loaded = true;
+        Populate(App.Services.Settings);
     }
 
-    private void ThemeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!_loaded || ThemeBox.SelectedItem is not ComboBoxItem item)
-            return;
+        var settings = new AppSettings
+        {
+            AutoStartMinimized = AutoStartMinimizedBox.IsChecked == true,
+            MinimizeToTrayOnClose = MinimizeToTrayBox.IsChecked == true,
+            ConfirmBeforeExit = ConfirmBeforeExitBox.IsChecked == true,
+            ShowTrayNotifications = ShowTrayNotificationsBox.IsChecked == true,
+            Theme = SelectedTag(ThemeBox, "System"),
+            StartPage = SelectedTag(StartPageBox, "LastUsed"),
+            LastPage = App.Services.Settings.LastPage,
+            PortAutoRefreshSeconds = int.TryParse(SelectedTag(PortRefreshBox, "0"), out int seconds)
+                ? seconds
+                : 0,
+            ShowSystemProcesses = ShowSystemProcessesBox.IsChecked == true,
+        };
 
-        string theme = item.Tag?.ToString() ?? "System";
-        var settings = ConfigStorage.Load().Settings;
-        settings.Theme = theme;
-        ConfigStorage.SaveSettings(settings);
-        ApplyTheme(theme);
+        App.Services.SaveSettings(settings);
+        ApplyTheme(settings.Theme);
+        SavedBar.IsOpen = true;
+    }
+
+    private void Reset_Click(object sender, RoutedEventArgs e)
+        => Populate(new AppSettings { LastPage = App.Services.Settings.LastPage });
+
+    private void OpenDataDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string? directory = Path.GetDirectoryName(ConfigStorage.GetConfigPath());
+            if (string.IsNullOrWhiteSpace(directory))
+                return;
+            Directory.CreateDirectory(directory);
+            Process.Start(new ProcessStartInfo(directory) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            SavedBar.Severity = InfoBarSeverity.Error;
+            SavedBar.Message = $"无法打开数据目录：{ex.Message}";
+            SavedBar.IsOpen = true;
+        }
+    }
+
+    private void Populate(AppSettings settings)
+    {
+        AutoStartMinimizedBox.IsChecked = settings.AutoStartMinimized;
+        MinimizeToTrayBox.IsChecked = settings.MinimizeToTrayOnClose;
+        ConfirmBeforeExitBox.IsChecked = settings.ConfirmBeforeExit;
+        ShowTrayNotificationsBox.IsChecked = settings.ShowTrayNotifications;
+        ShowSystemProcessesBox.IsChecked = settings.ShowSystemProcesses;
+        SelectTag(ThemeBox, settings.Theme, "System");
+        SelectTag(StartPageBox, settings.StartPage, "LastUsed");
+        SelectTag(PortRefreshBox, settings.PortAutoRefreshSeconds.ToString(), "0");
     }
 
     private static void ApplyTheme(string theme)
@@ -37,5 +77,18 @@ public sealed partial class SettingsPage : Page
             "Dark" => ElementTheme.Dark,
             _ => ElementTheme.Default,
         };
+    }
+
+    private static string SelectedTag(ComboBox comboBox, string fallback)
+        => (comboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? fallback;
+
+    private static void SelectTag(ComboBox comboBox, string? value, string fallback)
+    {
+        comboBox.SelectedItem = comboBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), value, StringComparison.OrdinalIgnoreCase))
+            ?? comboBox.Items
+                .OfType<ComboBoxItem>()
+                .First(item => string.Equals(item.Tag?.ToString(), fallback, StringComparison.OrdinalIgnoreCase));
     }
 }

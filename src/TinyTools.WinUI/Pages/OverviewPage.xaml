@@ -7,8 +7,8 @@
             <TextBlock Text="概览" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock Text="WinUI 3 迁移预览" Style="{StaticResource SubtitleTextBlockStyle}" />
             <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
-                     Title="第一阶段"
-                     Message="Core 服务层已供 WPF 与 WinUI 共同使用；旧版仍完整保留，可随时回退。" />
+                     Title="第二阶段已完成"
+                     Message="SSH 管理与应用生命周期已迁移；WPF 版本仍完整保留，可并行运行和回退。" />
             <Grid ColumnSpacing="16" RowSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="280" />
@@ -18,19 +18,19 @@
                 <Border Padding="20" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="8">
                         <TextBlock Text="SSH 隧道" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock Text="配置与连接服务已进入共享 Core。" TextWrapping="Wrap" />
+                        <TextBlock Text="新增、编辑、连接、重连、Host Key 确认与日志均已可用。" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Padding="20" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="端口表格 POC" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock Text="使用虚拟化 ListView，不引入停更 DataGrid。" TextWrapping="Wrap" />
+                        <TextBlock Text="后台与托盘" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="原生托盘、单实例唤回、关闭策略和通知已经接通。" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Padding="20" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Windows 10" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock Text="不支持 Mica 时自动回退为主题背景。" TextWrapping="Wrap" />
+                        <TextBlock Text="便携单文件" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="配置保存在程序旁，升级后不会留在临时解包目录。" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </Grid>

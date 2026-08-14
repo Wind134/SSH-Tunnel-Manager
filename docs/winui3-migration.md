@@ -19,8 +19,12 @@
 2. `TinyTools.Core` owns UI-neutral models and services. Stage 1 links the
    proven source files into the new assembly so assembly ownership changes
    without a risky namespace-and-file move in the same commit.
-3. Use stable `Microsoft.WindowsAppSDK 2.3.1` (MIT, Microsoft-supported current
-   channel at audit time). Target Windows 10 build 19041 as the existing app does.
+3. Use the official component graph shipped by `Microsoft.WindowsAppSDK 2.3.1`:
+   WinUI 2.3.0, Foundation 2.3.5 and InteractiveExperiences 2.1.3 (Microsoft
+   Windows App SDK license, Microsoft-maintained current channel at audit time).
+   Referencing the required components directly avoids shipping unused AI, ML,
+   Widgets and DWrite payloads from the meta-package. Target Windows 10 build
+   19041 as the existing app does.
 4. Use Mica only when supported. Windows 10 uses the normal theme background.
 5. Do not use `CommunityToolkit.WinUI.UI.Controls.DataGrid` 7.1.2: the package's
    last stable update was in 2021. The port-table POC uses WinUI's virtualizing
@@ -47,7 +51,7 @@
 - Validate native virtualizing ListView as the zero-dependency port table.
 - Add WinUI single-file preview publishing while keeping WPF release output.
 
-### Stage 2 — SSH and application lifecycle parity
+### Stage 2 — SSH and application lifecycle parity (completed 2026-08-15)
 
 - Move tunnel presentation state out of the service and expose asynchronous host
   key confirmation instead of a synchronous UI callback.
@@ -55,6 +59,22 @@
   logs, validation, and accessible ContentDialogs in WinUI.
 - Add single-instance activation, close/minimize policy, tray icon, notifications,
   unhandled-error reporting, and configuration migration tests.
+
+Verified checkpoint:
+
+- The WinUI tunnel page supports create/edit/delete, SSH config import,
+  start/stop/start-all, reconnect state, shared logs and asynchronous first-use
+  or changed Host Key confirmation. WPF consumes the same new Core contract.
+- Application-level services survive page navigation. The WinUI preview has an
+  independent single-instance channel so it can run beside the WPF rollback.
+- The tray icon and context menu use Win32 `Shell_NotifyIcon` directly; no
+  Windows Forms or third-party tray dependency is shipped.
+- Single-file configuration is explicitly rooted beside the distributed EXE,
+  not in the temporary bundle extraction directory, so upgrades retain data.
+- Release WPF and WinUI builds complete with zero warnings; 19 automated tests
+  pass. The verified `win-x64` self-contained single file is 161.84 MiB and its
+  real-process smoke test covers first launch, second-instance activation,
+  close-to-tray, restore and crash-log absence.
 
 ### Stage 3 — inspection and settings parity
 

@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using SSHTunnelManager.Services;
 
 namespace TinyTools;
 
@@ -10,6 +11,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        ConfigStorage.ConfigureExecutablePath(Environment.ProcessPath);
         _singleInstanceMutex = new Mutex(
             initiallyOwned: true,
             name: @"Local\TinyTools_SingleInstance",
@@ -31,7 +33,7 @@ public partial class App : System.Windows.Application
         {
             try
             {
-                var dataDir = System.IO.Path.Combine(System.AppContext.BaseDirectory, "data");
+                var dataDir = System.IO.Path.GetDirectoryName(ConfigStorage.GetConfigPath())!;
                 System.IO.Directory.CreateDirectory(dataDir);
                 System.IO.File.AppendAllText(
                     System.IO.Path.Combine(dataDir, "crash.log"),

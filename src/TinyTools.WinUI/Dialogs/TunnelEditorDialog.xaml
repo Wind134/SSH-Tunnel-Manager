@@ -1,0 +1,55 @@
+<ContentDialog
+    x:Class="TinyTools.WinUI.Dialogs.TunnelEditorDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    PrimaryButtonText="保存"
+    CloseButtonText="取消"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
+        <StackPanel Width="520" Spacing="12" Padding="0,4,0,0">
+            <InfoBar x:Name="ErrorBar" IsOpen="False" IsClosable="False" Severity="Error" />
+
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="SshConfigBox" Header="从 ~/.ssh/config 导入"
+                          DisplayMemberPath="Host" HorizontalAlignment="Stretch" />
+                <Button Grid.Column="1" Content="导入" VerticalAlignment="Bottom" Click="ImportSshConfig_Click" />
+            </Grid>
+
+            <TextBox x:Name="NameBox" Header="名称" PlaceholderText="例如：生产环境" />
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="UserBox" Header="SSH 用户名" />
+                <NumberBox x:Name="SshPortBox" Grid.Column="1" Header="SSH 端口"
+                           Minimum="1" Maximum="65535" Value="22" SpinButtonPlacementMode="Compact" />
+            </Grid>
+            <PasswordBox x:Name="HostBox" Header="SSH 地址" PasswordRevealMode="Peek" />
+
+            <ComboBox x:Name="AuthBox" Header="认证方式" SelectionChanged="AuthBox_SelectionChanged">
+                <ComboBoxItem Content="密码" Tag="Password" />
+                <ComboBoxItem Content="私钥" Tag="PrivateKey" />
+            </ComboBox>
+            <PasswordBox x:Name="PasswordBox" Header="SSH 密码" PasswordRevealMode="Peek" />
+            <Grid x:Name="KeyPanel" ColumnSpacing="8" Visibility="Collapsed">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="KeyFileBox" Header="私钥文件" IsReadOnly="True" />
+                <Button Grid.Column="1" Content="浏览…" VerticalAlignment="Bottom" Click="BrowseKey_Click" />
+            </Grid>
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <NumberBox x:Name="LocalPortBox" Header="本地目标端口" Minimum="1" Maximum="65535"
+                           Value="7890" SpinButtonPlacementMode="Compact" />
+                <NumberBox x:Name="RemotePortBox" Grid.Column="1" Header="远程监听端口" Minimum="1" Maximum="65535"
+                           Value="1080" SpinButtonPlacementMode="Compact" />
+            </Grid>
+            <CheckBox x:Name="AutoReconnectBox" Content="断线后自动重连" IsChecked="True" />
+            <TextBlock x:Name="TrustHint" Opacity="0.65" TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>
