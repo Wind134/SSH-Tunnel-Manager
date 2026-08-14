@@ -10,6 +10,13 @@ namespace TinyTools.Tests;
 public class CoreBehaviorTests
 {
     [Fact]
+    public void UiNeutralTypesAreOwnedByCoreAssembly()
+    {
+        Assert.Equal("TinyTools.Core", typeof(TunnelConfig).Assembly.GetName().Name);
+        Assert.Equal("TinyTools.Core", typeof(HandleViewer.Models.PortOccupant).Assembly.GetName().Name);
+    }
+
+    [Fact]
     public void AppSettingsHaveSafeDefaults()
     {
         var settings = new AppSettings();

@@ -419,14 +419,9 @@ public class TunnelManager : IDisposable
         }
         catch (Renci.SshNet.Common.SshException ex)
         {
-            // SSH.NET 2020.0.2 does not support the modern OpenSSH key format
-            // ("-----BEGIN OPENSSH PRIVATE KEY-----"), which is the default for
-            // ssh-keygen ed25519 / newer RSA keys.
             throw new InvalidOperationException(
-                "The private key could not be parsed. It may be in the newer OpenSSH " +
-                "format or encrypted with a passphrase (both unsupported by this build).\n" +
-                "Convert it to classic PEM without a passphrase:\n" +
-                $"  ssh-keygen -p -m PEM -f \"{keyPath}\"\n\n" +
+                "The private key could not be parsed. Verify that the key format and " +
+                "passphrase are valid, then select the key again.\n\n" +
                 $"Details: {ex.Message}", ex);
         }
     }

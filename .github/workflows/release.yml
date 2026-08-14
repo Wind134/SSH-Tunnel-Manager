@@ -26,6 +26,16 @@ jobs:
       - name: Test
         run: dotnet test tests/TinyTools.Tests/TinyTools.Tests.csproj -c Release
 
+      - name: Build WinUI migration preview
+        run: |
+          dotnet publish src/TinyTools.WinUI/TinyTools.WinUI.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishProfile=win-x64 `
+            -o winui-preview
+          Get-ChildItem winui-preview -Filter "*.pdb" -File -ErrorAction SilentlyContinue | Remove-Item -Force
+
       - name: Publish TinyTools (self-contained, single-file)
         run: |
           dotnet publish src/TinyTools/TinyTools.csproj `
@@ -92,6 +102,12 @@ jobs:
           path: |
             TinyTools-*-win-x64.zip
             installer-output/TinyTools-*-win-x64-Setup.exe
+
+      - name: Upload WinUI migration preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: TinyTools-WinUI-preview-win-x64
+          path: winui-preview/**
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')

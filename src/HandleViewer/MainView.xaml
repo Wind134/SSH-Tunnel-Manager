@@ -1,7 +1,7 @@
 <UserControl x:Class="HandleViewer.MainView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-       xmlns:models="clr-namespace:HandleViewer.Models"
+       xmlns:models="clr-namespace:HandleViewer.Models;assembly=TinyTools.Core"
        Background="{DynamicResource AppBg}"
        TextElement.Foreground="{DynamicResource AppFg}"
        TextElement.FontFamily="Microsoft YaHei UI"

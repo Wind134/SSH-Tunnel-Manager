@@ -1,0 +1,39 @@
+<Page
+    x:Class="TinyTools.WinUI.Pages.OverviewPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel Padding="32" Spacing="18" MaxWidth="980" HorizontalAlignment="Left">
+            <TextBlock Text="概览" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Text="WinUI 3 迁移预览" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                     Title="第一阶段"
+                     Message="Core 服务层已供 WPF 与 WinUI 共同使用；旧版仍完整保留，可随时回退。" />
+            <Grid ColumnSpacing="16" RowSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="280" />
+                </Grid.ColumnDefinitions>
+                <Border Padding="20" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="SSH 隧道" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="配置与连接服务已进入共享 Core。" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="20" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="端口表格 POC" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="使用虚拟化 ListView，不引入停更 DataGrid。" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="20" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Windows 10" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="不支持 Mica 时自动回退为主题背景。" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
