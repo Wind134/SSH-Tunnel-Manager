@@ -137,8 +137,8 @@
             </Grid>
         </TabItem>
 
-        <!-- Tab 2: 文件锁查询 -->
-        <TabItem Header="文件锁查询">
+        <!-- Tab 2: 文件/文件夹占用查询 -->
+        <TabItem Header="文件/文件夹占用">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -151,14 +151,18 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox Grid.Column="0" Name="FilePathBox"
                              Padding="8,4" VerticalContentAlignment="Center"
-                             ToolTip="输入文件路径,或拖拽文件到此处"
+                             ToolTip="输入文件或文件夹路径，按 Enter 查询；也可以直接拖拽"
+                             KeyDown="FilePathBox_KeyDown"
                              AllowDrop="True"
                              DragEnter="FileLock_DragEnter"
                              Drop="FileLock_Drop" />
-                    <Button Grid.Column="1" Name="BrowseBtn" Content="浏览" Click="Browse_Click"
+                    <Button Grid.Column="1" Name="BrowseFileBtn" Content="选择文件" Click="BrowseFile_Click"
+                            Padding="14,6" Margin="8,0,0,0" />
+                    <Button Grid.Column="2" Name="BrowseFolderBtn" Content="选择文件夹" Click="BrowseFolder_Click"
                             Padding="14,6" Margin="8,0,0,0" />
                 </Grid>
 
@@ -169,8 +173,8 @@
                             VerticalAlignment="Center" HorizontalAlignment="Center"
                             Visibility="Visible">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="将文件拖拽到此处" FontSize="18" HorizontalAlignment="Center" Opacity="0.6" />
-                            <TextBlock Text="或点击上方&#x22;浏览...&#x22;选择文件" FontSize="12" HorizontalAlignment="Center" Opacity="0.4" Margin="0,8,0,0" />
+                            <TextBlock Text="将文件或文件夹拖拽到此处" FontSize="18" HorizontalAlignment="Center" Opacity="0.6" />
+                            <TextBlock Text="或点击上方按钮选择路径" FontSize="12" HorizontalAlignment="Center" Opacity="0.4" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
 
