@@ -181,9 +181,9 @@ public partial class MainView : UserControl
     private void CopyRow_Click(object sender, RoutedEventArgs e)
         => CopyPortRow(GetSelectedRow(Grid));
 
-    // --- File lock tab ---
+    // --- File/folder lock tab ---
 
-    private void Browse_Click(object sender, RoutedEventArgs e)
+    private void BrowseFile_Click(object sender, RoutedEventArgs e)
     {
         var ofd = new Microsoft.Win32.OpenFileDialog
         {
@@ -193,8 +193,31 @@ public partial class MainView : UserControl
         if (ofd.ShowDialog() == true)
         {
             FilePathBox.Text = ofd.FileName;
-            QueryFileLocks(ofd.FileName);
+            QueryPathLocks(ofd.FileName);
         }
+    }
+
+    private void BrowseFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "选择要查询的文件夹",
+            Multiselect = false,
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            FilePathBox.Text = dialog.FolderName;
+            QueryPathLocks(dialog.FolderName);
+        }
+    }
+
+    private void FilePathBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+
+        QueryPathLocks(FilePathBox.Text);
+        e.Handled = true;
     }
 
     private void FileLock_DragEnter(object sender, DragEventArgs e)
@@ -214,21 +237,24 @@ public partial class MainView : UserControl
             if (files.Length > 0)
             {
                 FilePathBox.Text = files[0];
-                QueryFileLocks(files[0]);
+                QueryPathLocks(files[0]);
             }
         }
         e.Handled = true;
     }
 
-    private async void QueryFileLocks(string filePath)
+    private async void QueryPathLocks(string path)
     {
-        if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath))
+        if (string.IsNullOrWhiteSpace(path)
+            || (!System.IO.File.Exists(path) && !System.IO.Directory.Exists(path)))
         {
-            LockStatusText.Text = "文件不存在";
+            LockStatusText.Text = "路径不存在";
             DropHint.Visibility = Visibility.Visible;
             LockGrid.Visibility = Visibility.Collapsed;
             return;
         }
+
+        bool isDirectory = System.IO.Directory.Exists(path);
 
         // Cancel any previous query still in flight
         _fileLockCts?.Cancel();
@@ -236,28 +262,37 @@ public partial class MainView : UserControl
         var ct = _fileLockCts.Token;
 
         Cursor = Cursors.Wait;
-        LockStatusText.Text = "正在查询...";
+        LockStatusText.Text = isDirectory ? "正在扫描文件夹并查询占用..." : "正在查询文件占用...";
         DropHint.Visibility = Visibility.Collapsed;
         LockGrid.Visibility = Visibility.Visible;
 
         try
         {
-            var lockers = await System.Threading.Tasks.Task.Run(
-                () => FileLockInspector.GetFileLockers(filePath), ct);
+            var result = await System.Threading.Tasks.Task.Run(
+                () => FileLockInspector.GetPathLockers(path, ct), ct);
 
             if (ct.IsCancellationRequested) return;
 
-            LockGrid.ItemsSource = lockers;
+            LockGrid.ItemsSource = result.Entries;
 
-            if (lockers.Count == 0)
+            if (!string.IsNullOrEmpty(result.ErrorMessage))
             {
-                LockStatusText.Text = $"\u201C{filePath}\u201D - 未被任何进程锁定";
+                LockStatusText.Text = $"查询失败：{result.ErrorMessage}";
+                DropHint.Visibility = Visibility.Visible;
+                LockGrid.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            LockStatusText.Text = BuildLockStatus(result);
+            if (result.Entries.Count == 0)
+            {
                 DropHint.Visibility = Visibility.Visible;
                 LockGrid.Visibility = Visibility.Collapsed;
             }
             else
             {
-                LockStatusText.Text = $"\u201C{filePath}\u201D - {lockers.Count} 个进程锁定";
+                DropHint.Visibility = Visibility.Collapsed;
+                LockGrid.Visibility = Visibility.Visible;
             }
         }
         catch (OperationCanceledException)
@@ -268,6 +303,29 @@ public partial class MainView : UserControl
         {
             Cursor = Cursors.Arrow;
         }
+    }
+
+    private static string BuildLockStatus(PathLockQueryResult result)
+    {
+        string occupation = result.Entries.Count == 0
+            ? "未发现占用进程"
+            : $"发现 {result.Entries.Count} 个占用进程";
+
+        if (!result.IsDirectory)
+            return $"“{result.QueriedPath}” - {occupation}";
+
+        var scanDetails = new List<string>
+        {
+            $"已扫描 {result.ScannedFileCount} 个文件",
+        };
+        if (result.SkippedDirectoryCount > 0)
+            scanDetails.Add($"跳过 {result.SkippedDirectoryCount} 个无法访问的目录");
+        if (result.WasTruncated)
+            scanDetails.Add($"达到 {FileLockInspector.MaxDirectoryFileCount} 个文件上限，结果可能不完整");
+        if (result.ScannedFileCount == 0)
+            scanDetails.Add("没有可扫描文件；系统接口无法检查文件夹自身句柄");
+
+        return $"“{result.QueriedPath}” - {occupation}；{string.Join("；", scanDetails)}";
     }
 
     // --- File lock tab context menu ---
@@ -282,7 +340,7 @@ public partial class MainView : UserControl
     {
         var row = GetSelectedLockRow();
         if (KillProcessFor(row?.Pid, row?.ProcessName))
-            QueryFileLocks(FilePathBox.Text); // refresh after kill
+            QueryPathLocks(FilePathBox.Text); // refresh after kill
     }
 
     private void LockCopyRow_Click(object sender, RoutedEventArgs e)

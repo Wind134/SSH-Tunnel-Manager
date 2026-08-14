@@ -123,5 +123,77 @@ public class CoreBehaviorTests
         var missingPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.missing");
 
         Assert.Empty(FileLockInspector.GetFileLockers(missingPath));
+        Assert.Equal("路径不存在", FileLockInspector.GetPathLockers(missingPath).ErrorMessage);
+    }
+
+    [Fact]
+    public void EmptyDirectoryCanBeQueried()
+    {
+        string directory = CreateTemporaryDirectory();
+        try
+        {
+            var result = FileLockInspector.GetPathLockers(directory);
+
+            Assert.True(result.IsDirectory);
+            Assert.Equal(0, result.ScannedFileCount);
+            Assert.Empty(result.Entries);
+            Assert.Empty(result.ErrorMessage);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DirectoryQueryScansNestedFiles()
+    {
+        string directory = CreateTemporaryDirectory();
+        try
+        {
+            string childDirectory = Directory.CreateDirectory(Path.Combine(directory, "child")).FullName;
+            File.WriteAllText(Path.Combine(directory, "root.txt"), "root");
+            File.WriteAllText(Path.Combine(childDirectory, "child.txt"), "child");
+
+            var result = FileLockInspector.GetPathLockers(directory);
+
+            Assert.True(result.IsDirectory);
+            Assert.Equal(2, result.ScannedFileCount);
+            Assert.False(result.WasTruncated);
+            Assert.Empty(result.ErrorMessage);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DirectoryQueryFindsProcessHoldingNestedFile()
+    {
+        string directory = CreateTemporaryDirectory();
+        string filePath = Path.Combine(directory, "held.txt");
+        File.WriteAllText(filePath, "held");
+
+        try
+        {
+            using var heldFile = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            var result = FileLockInspector.GetPathLockers(directory);
+
+            Assert.Empty(result.ErrorMessage);
+            Assert.Contains(result.Entries, entry => entry.Pid == Environment.ProcessId);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static string CreateTemporaryDirectory()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "TinyTools.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        return directory;
     }
 }
