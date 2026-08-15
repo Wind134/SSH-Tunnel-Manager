@@ -11,7 +11,7 @@
     <AssemblyTitle>TinyTools</AssemblyTitle>
     <Company>AI开发工具</Company>
     <Product>TinyTools</Product>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>

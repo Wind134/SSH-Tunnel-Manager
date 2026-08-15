@@ -6,7 +6,15 @@ param(
     [string]$PublishDir,
 
     [string]$OutputDir = "",
-    [string]$IsccPath = ""
+    [string]$IsccPath = "",
+
+    [ValidatePattern('^[A-Za-z0-9.-]+$')]
+    [string]$ArtifactPrefix = "TinyTools",
+
+    [ValidatePattern('^[A-Za-z0-9._-]+\.exe$')]
+    [string]$AppExeName = "TinyTools.exe",
+
+    [string]$AppMutex = "Local\TinyTools_SingleInstance"
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,9 +28,9 @@ $resolvedOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     [System.IO.Path]::GetFullPath($OutputDir)
 }
 
-$publishedExe = Join-Path $resolvedPublishDir "TinyTools.exe"
+$publishedExe = Join-Path $resolvedPublishDir $AppExeName
 if (-not (Test-Path $publishedExe)) {
-    throw "Published TinyTools.exe not found: $publishedExe"
+    throw "Published application executable not found: $publishedExe"
 }
 
 if ([string]::IsNullOrWhiteSpace($IsccPath)) {
@@ -51,10 +59,14 @@ Write-Host "Version: $Version"
 Write-Host "Compiler: $IsccPath"
 Write-Host "Published files: $resolvedPublishDir"
 Write-Host "Output: $resolvedOutputDir"
+Write-Host "Executable: $AppExeName"
 
 & $IsccPath `
     "/DMyAppVersion=$Version" `
     "/DPublishDir=$resolvedPublishDir" `
+    "/DMyArtifactPrefix=$ArtifactPrefix" `
+    "/DMyAppExeName=$AppExeName" `
+    "/DMyAppMutex=$AppMutex" `
     "/O$resolvedOutputDir" `
     $scriptPath
 
@@ -62,7 +74,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup compiler failed with exit code $LASTEXITCODE."
 }
 
-$installerPath = Join-Path $resolvedOutputDir "TinyTools-v$Version-win-x64-Setup.exe"
+$installerPath = Join-Path $resolvedOutputDir "$ArtifactPrefix-v$Version-win-x64-Setup.exe"
 if (-not (Test-Path $installerPath)) {
     throw "Installer output was not found: $installerPath"
 }
@@ -70,4 +82,3 @@ if (-not (Test-Path $installerPath)) {
 $size = (Get-Item $installerPath).Length / 1MB
 Write-Host "Installer: $installerPath" -ForegroundColor Green
 Write-Host ("Size: {0:N1} MB" -f $size)
-

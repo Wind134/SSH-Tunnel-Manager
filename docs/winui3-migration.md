@@ -90,10 +90,11 @@ Verified checkpoint:
   work area, then remembers the last non-maximized size with debounced writes.
 - Added a dependency-free GitHub Release checker/downloader. It accepts only
   `TinyTools-WinUI-*` assets and requires SHA-256 verification before making a
-  download available to the user. ZIP updates use a guided manual replacement;
-  a future WinUI installer can be launched only after explicit confirmation.
-- The release workflow now publishes a versioned WinUI ZIP and checksum beside
-  the stable WPF fallback artifacts.
+  download available to the user. It prefers the verified WinUI installer and
+  launches it only after explicit confirmation; ZIP updates retain the guided
+  manual replacement path.
+- The release workflow now publishes versioned WinUI ZIP and Inno Setup assets,
+  SHA-256 files for both, and a separately named WPF fallback ZIP.
 
 Verified checkpoint:
 
@@ -104,8 +105,9 @@ Verified checkpoint:
 
 ### Stage 4 — release cutover
 
-- Add the WinUI Inno Setup output beside the existing verified ZIP, then test clean install,
-  first-launch extraction, in-place upgrade, uninstall, and config preservation.
+- The WinUI Inno Setup output is generated beside the verified ZIP. Complete
+  clean-install, first-launch extraction, in-place upgrade, uninstall and
+  configuration-preservation testing on clean machines.
 - Run the complete acceptance matrix on Windows 10 and Windows 11.
 - Switch release defaults only after approval; keep the WPF source/tag as a
   rollback line. Evaluate package identity/MSIX only for a concrete API need.

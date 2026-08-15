@@ -42,14 +42,17 @@
 
 ## 下载与更新
 
-GitHub Release 提供便携 ZIP；正式切换前仍保留 WPF 安装包作为回退。WinUI 包使用以下独立命名，避免与旧应用混淆：
+GitHub Release 提供 WinUI 便携 ZIP 和 Inno Setup 安装包，并继续提供单独命名的 WPF 便携包作为回退。正式制品使用以下命名：
 
 ```text
 TinyTools-WinUI-v<版本>-win-x64.zip
 TinyTools-WinUI-v<版本>-win-x64.zip.sha256
+TinyTools-WinUI-v<版本>-win-x64-Setup.exe
+TinyTools-WinUI-v<版本>-win-x64-Setup.exe.sha256
+TinyTools-WPF-v<版本>-win-x64.zip
 ```
 
-WinUI 应用可在“设置 → 关于与更新”中检查 GitHub 最新版本。下载器只接受 WinUI 命名的资产，并在交付前验证 SHA-256。ZIP 下载完成后会引导退出应用并覆盖程序文件；配置位于独立 `data` 目录，不包含在更新包中。未来 WinUI 安装包完成验收后，应用可以在用户确认后启动安装程序完成升级。
+WinUI 应用可在“设置 → 关于与更新”中检查 GitHub 最新版本。下载器只接受 WinUI 命名的资产，优先选择安装包，并在交付前验证 SHA-256。便携 ZIP 下载完成后会引导退出应用并覆盖程序文件；配置位于独立 `data` 目录，不包含在更新包中。安装包下载完成后，应用可以在用户确认后启动安装程序完成升级。
 
 ## 系统要求
 
@@ -90,10 +93,10 @@ dotnet publish .\src\TinyTools.WinUI\TinyTools.WinUI.csproj `
   -p:PublishProfile=win-x64 -o .\artifacts\winui
 ```
 
-现有 `build.ps1` 和 Inno Setup 脚本继续生成 WPF 稳定版，直至 WinUI 完成功能、安装升级和真机验收。推送 `v*` 标签后，GitHub Actions 会运行测试，生成 WPF 回退产物以及带 SHA-256 的 WinUI ZIP，并创建 GitHub Release。
+现有 `build.ps1` 仍可生成 WPF 回退版。GitHub Actions 的主发布链以 WinUI 为默认制品，手动运行时生成与项目版本一致的 Actions Artifacts；推送与项目版本一致的 `v*` 标签后，会生成 WinUI ZIP、WinUI Inno Setup 安装包、各自的 SHA-256 文件、WPF 回退 ZIP，并创建 GitHub Release。
 
 ## 迁移状态
 
-WinUI 应用已覆盖 SSH 管理、Host Key 校验、自动重连、端口/进程查看、文件/文件夹占用、设置、主题、托盘、单实例、通知、配置迁移和 GitHub 更新下载。WPF 源码与发布链仍然保留，待 Windows 10/11 真机矩阵、WinUI Inno Setup 安装/升级以及完整可访问性验收通过后再进行发布切换。
+WinUI 应用已覆盖 SSH 管理、Host Key 校验、自动重连、端口/进程查看、文件/文件夹占用、设置、主题、托盘、单实例、通知、配置迁移和 GitHub 更新下载。WinUI ZIP 与 Inno Setup 发布链已经接通，WPF 源码和回退 ZIP 仍然保留；Windows 10/11 真机矩阵、安装升级及完整可访问性仍需持续验收。
 
 详细的阶段记录、技术取舍和剩余验收项见 [WinUI 3 迁移文档](docs/winui3-migration.md)。
