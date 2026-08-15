@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\TinyTools.Core\TinyTools.Core.csproj" />
     <ProjectReference Include="..\..\src\HandleViewer\HandleViewer.csproj" />
     <ProjectReference Include="..\..\src\SSHTunnelManager\SSHTunnelManager.csproj" />
   </ItemGroup>

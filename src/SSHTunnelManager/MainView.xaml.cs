@@ -33,16 +33,19 @@ public partial class MainView : System.Windows.Controls.UserControl
 
         _tunnelManager.ConfigChanged += () => Dispatcher.Invoke(_viewModel.SaveConfig);
 
-        _tunnelManager.OnHostKeyReceived += (state, fingerprint, algoName) =>
+        _tunnelManager.HostKeyConfirmationRequested += (request, cancellationToken) =>
         {
             bool result = false;
             Dispatcher.Invoke(() =>
             {
-                var dialog = new Views.HostKeyDialog(state, fingerprint, algoName);
+                var dialog = new Views.HostKeyDialog(
+                    request.State,
+                    request.Fingerprint,
+                    request.Algorithm);
                 dialog.Owner = Window.GetWindow(this);
                 result = dialog.ShowDialog() == true;
             });
-            return result;
+            return Task.FromResult(result);
         };
     }
 

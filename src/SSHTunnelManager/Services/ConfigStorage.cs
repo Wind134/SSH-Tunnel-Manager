@@ -10,16 +10,18 @@ public class ConfigStorage
 {
     // Store next to the executable (not %APPDATA%) so the config survives UAC
     // elevation (running as administrator redirects %APPDATA% to the admin profile).
-    private static readonly string s_appDir =
-        Path.Combine(AppContext.BaseDirectory, "data");
+    // The WinUI single-file host extracts all bundled content before launch,
+    // which makes AppContext.BaseDirectory point into %TEMP%. The executable
+    // host configures this path at startup so data survives bundle updates.
+    private static string s_appDir = Path.Combine(AppContext.BaseDirectory, "data");
 
     // Legacy location used before the admin-mode change; used only for one-time migration.
     private static readonly string? s_legacyAppDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SSHTunnelManager");
 
-    private static readonly string s_configPath = Path.Combine(s_appDir, "config.json");
-    private static readonly string s_backupPath = Path.Combine(s_appDir, "config.json.bak");
-    private static readonly string s_tmpPath = Path.Combine(s_appDir, "config.json.tmp");
+    private static string ConfigPath => Path.Combine(s_appDir, "config.json");
+    private static string BackupPath => Path.Combine(s_appDir, "config.json.bak");
+    private static string TemporaryPath => Path.Combine(s_appDir, "config.json.tmp");
 
     private static readonly JsonSerializerOptions s_jsonOpts = new()
     {
@@ -28,16 +30,26 @@ public class ConfigStorage
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    public static void ConfigureExecutablePath(string? executablePath)
+    {
+        if (string.IsNullOrWhiteSpace(executablePath))
+            return;
+
+        string? executableDirectory = Path.GetDirectoryName(executablePath);
+        if (!string.IsNullOrWhiteSpace(executableDirectory))
+            s_appDir = Path.Combine(executableDirectory, "data");
+    }
+
     public static ConfigFile Load()
     {
         Directory.CreateDirectory(s_appDir);
         MigrateIfNeeded();
 
-        if (File.Exists(s_configPath))
+        if (File.Exists(ConfigPath))
         {
             try
             {
-                var json = File.ReadAllText(s_configPath);
+                var json = File.ReadAllText(ConfigPath);
                 var config = JsonSerializer.Deserialize<ConfigFile>(json, s_jsonOpts);
                 if (config != null)
                     return config;
@@ -48,11 +60,11 @@ public class ConfigStorage
             }
         }
 
-        if (File.Exists(s_backupPath))
+        if (File.Exists(BackupPath))
         {
             try
             {
-                var json = File.ReadAllText(s_backupPath);
+                var json = File.ReadAllText(BackupPath);
                 var config = JsonSerializer.Deserialize<ConfigFile>(json, s_jsonOpts);
                 if (config != null)
                     return config;
@@ -70,7 +82,7 @@ public class ConfigStorage
     // so the user doesn't lose saved tunnels after switching to admin mode.
     private static void MigrateIfNeeded()
     {
-        if (File.Exists(s_configPath) || s_legacyAppDir == null)
+        if (File.Exists(ConfigPath) || s_legacyAppDir == null)
             return;
 
         var legacyConfig = Path.Combine(s_legacyAppDir, "config.json");
@@ -79,7 +91,7 @@ public class ConfigStorage
 
         try
         {
-            File.Copy(legacyConfig, s_configPath, overwrite: false);
+            File.Copy(legacyConfig, ConfigPath, overwrite: false);
         }
         catch
         {
@@ -92,21 +104,21 @@ public class ConfigStorage
         Directory.CreateDirectory(s_appDir);
 
         // backup current file before overwriting
-        if (File.Exists(s_configPath))
+        if (File.Exists(ConfigPath))
         {
-            try { File.Copy(s_configPath, s_backupPath, overwrite: true); }
+            try { File.Copy(ConfigPath, BackupPath, overwrite: true); }
             catch { /* non-critical */ }
         }
 
         // atomic write: write to temp file, then rename
         var json = JsonSerializer.Serialize(config, s_jsonOpts);
-        File.WriteAllText(s_tmpPath, json);
+        File.WriteAllText(TemporaryPath, json);
 
         // File.Move with overwrite:true is a single atomic rename on Windows
         // (the old delete-then-move sequence left a window where a crash could
         // lose the config entirely; the .bak fallback covered it, but this is
         // strictly safer).
-        File.Move(s_tmpPath, s_configPath, overwrite: true);
+        File.Move(TemporaryPath, ConfigPath, overwrite: true);
     }
 
     public static void SaveSettings(AppSettings settings)
@@ -116,5 +128,5 @@ public class ConfigStorage
         Save(config);
     }
 
-    public static string GetConfigPath() => s_configPath;
+    public static string GetConfigPath() => ConfigPath;
 }

@@ -23,5 +23,8 @@ public class PortOccupant
     public int LocalPort { get; init; }
     public string RemoteAddress { get; init; } = string.Empty;
     public int RemotePort { get; init; }
+    public string RemoteEndpoint => Kind == TcpEntryKind.Listener
+        ? "—"
+        : $"{RemoteAddress}:{RemotePort}";
     public string State { get; init; } = string.Empty;
 }

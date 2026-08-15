@@ -250,6 +250,13 @@ public partial class AddEditDialog : Window
                 config.HostKeyFingerprint = string.Empty;
                 config.HostKeyTrust = HostKeyTrust.Unknown;
             }
+            else if (_editing.HostKeyTrust == HostKeyTrust.Rejected)
+            {
+                // Re-saving a rejected tunnel is the explicit action that lets
+                // the user review the host key again on the next connection.
+                config.HostKeyFingerprint = string.Empty;
+                config.HostKeyTrust = HostKeyTrust.Unknown;
+            }
             else
             {
                 config.HostKeyFingerprint = _editing.HostKeyFingerprint;

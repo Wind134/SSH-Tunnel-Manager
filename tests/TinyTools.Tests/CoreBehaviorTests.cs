@@ -4,11 +4,89 @@ using HandleViewer.Services;
 using SSHTunnelManager.Converters;
 using SSHTunnelManager.Models;
 using SSHTunnelManager.Services;
+using TinyTools.Core.Processes;
+using TinyTools.Core.Windowing;
 
 namespace TinyTools.Tests;
 
+[Collection("Config storage")]
 public class CoreBehaviorTests
 {
+    [Fact]
+    public void UiNeutralTypesAreOwnedByCoreAssembly()
+    {
+        Assert.Equal("TinyTools.Core", typeof(TunnelConfig).Assembly.GetName().Name);
+        Assert.Equal("TinyTools.Core", typeof(HandleViewer.Models.PortOccupant).Assembly.GetName().Name);
+    }
+
+    [Fact]
+    public void HostKeyConfirmationUsesAsyncUiNeutralContract()
+    {
+        var eventInfo = typeof(TunnelManager).GetEvent(nameof(TunnelManager.HostKeyConfirmationRequested));
+
+        Assert.NotNull(eventInfo);
+        Assert.Equal(
+            typeof(Func<HostKeyConfirmationRequest, CancellationToken, Task<bool>>),
+            eventInfo!.EventHandlerType);
+    }
+
+    [Fact]
+    public void ConfigStorageUsesExecutableDirectoryForSingleFileDurability()
+    {
+        string originalPath = ConfigStorage.GetConfigPath();
+        string executableDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            ConfigStorage.ConfigureExecutablePath(
+                Path.Combine(executableDirectory, "TinyTools.WinUI.exe"));
+
+            Assert.Equal(
+                Path.Combine(executableDirectory, "data", "config.json"),
+                ConfigStorage.GetConfigPath());
+        }
+        finally
+        {
+            string originalDirectory = Directory.GetParent(originalPath)!.Parent!.FullName;
+            ConfigStorage.ConfigureExecutablePath(
+                Path.Combine(originalDirectory, "testhost.exe"));
+        }
+    }
+
+    [Fact]
+    public async Task TunnelManagerSupportsUiIndependentCrudLifecycle()
+    {
+        using var manager = new TunnelManager();
+        var first = new TunnelConfig
+        {
+            Name = "first",
+            EncryptedHost = CryptoHelper.Encrypt("127.0.0.1"),
+        };
+        manager.Initialize([first]);
+
+        var state = Assert.Single(manager.TunnelStates);
+        Assert.Equal("first", state.Config.Name);
+
+        var updated = first.Clone();
+        updated.Name = "updated";
+        updated.HostKeyFingerprint = "SHA256:replacement";
+        updated.HostKeyTrust = HostKeyTrust.Trusted;
+        manager.UpdateTunnel(updated);
+        Assert.Equal("updated", state.Config.Name);
+        Assert.Equal("SHA256:replacement", state.Config.HostKeyFingerprint);
+        Assert.Equal(HostKeyTrust.Trusted, state.Config.HostKeyTrust);
+
+        var second = new TunnelConfig
+        {
+            Name = "second",
+            EncryptedHost = CryptoHelper.Encrypt("127.0.0.1"),
+        };
+        manager.AddTunnel(second);
+        Assert.Equal(2, manager.TunnelStates.Count);
+
+        await manager.RemoveTunnelAsync(second.Id);
+        Assert.Single(manager.TunnelStates);
+    }
+
     [Fact]
     public void AppSettingsHaveSafeDefaults()
     {
@@ -22,6 +100,50 @@ public class CoreBehaviorTests
         Assert.True(settings.ShowTrayNotifications);
         Assert.Equal(0, settings.PortAutoRefreshSeconds);
         Assert.False(settings.ShowSystemProcesses);
+        Assert.Equal(1120, settings.WindowWidth);
+        Assert.Equal(720, settings.WindowHeight);
+    }
+
+    [Theory]
+    [InlineData(1120, 700, 1400, 900, 1120, 700)]
+    [InlineData(400, 300, 1400, 900, 960, 620)]
+    [InlineData(1800, 1200, 1400, 900, 1376, 876)]
+    [InlineData(double.NaN, double.PositiveInfinity, 1400, 900, 1120, 720)]
+    [InlineData(1120, 720, 900, 560, 876, 536)]
+    public void WindowSizePolicyClampsRememberedLogicalSize(
+        double rememberedWidth,
+        double rememberedHeight,
+        double availableWidth,
+        double availableHeight,
+        double expectedWidth,
+        double expectedHeight)
+    {
+        var size = WindowSizePolicy.Normalize(
+            rememberedWidth, rememberedHeight, availableWidth, availableHeight);
+
+        Assert.Equal(expectedWidth, size.Width);
+        Assert.Equal(expectedHeight, size.Height);
+    }
+
+    [Theory]
+    [InlineData(0, "System", ProcessRiskLevel.Blocked)]
+    [InlineData(4, "System", ProcessRiskLevel.Blocked)]
+    [InlineData(900, "svchost", ProcessRiskLevel.Critical)]
+    [InlineData(901, "explorer", ProcessRiskLevel.Critical)]
+    [InlineData(902, "notepad", ProcessRiskLevel.Standard)]
+    public void ProcessActionsClassifyTerminationRisk(
+        int processId,
+        string processName,
+        ProcessRiskLevel expected)
+        => Assert.Equal(expected, ProcessActionService.AssessRisk(processId, processName).Level);
+
+    [Fact]
+    public void ProcessActionsResolveExecutableDirectory()
+    {
+        Assert.Equal(
+            Path.GetFullPath(@"C:\Windows\System32"),
+            ProcessActionService.GetExecutableDirectory(@"C:\Windows\System32\notepad.exe"));
+        Assert.Null(ProcessActionService.GetExecutableDirectory(null));
     }
 
     [Fact]

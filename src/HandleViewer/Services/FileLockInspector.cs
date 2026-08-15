@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using HandleViewer.Models;
 
 namespace HandleViewer.Services;
@@ -14,6 +15,7 @@ public static class FileLockInspector
     public const int MaxDirectoryFileCount = 4096;
 
     private const int RmRebootReasonNone = 0;
+    private const int CCH_RM_SESSION_KEY = 32;
     private const int CCH_RM_MAX_APP_NAME = 255;
     private const int CCH_RM_MAX_SVC_NAME = 63;
     private const int ERROR_SUCCESS = 0;
@@ -41,7 +43,10 @@ public static class FileLockInspector
     }
 
     [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
-    private static extern int RmStartSession(out uint pSessionHandle, int dwSessionFlags, string strSessionKey);
+    private static extern int RmStartSession(
+        out uint pSessionHandle,
+        int dwSessionFlags,
+        [Out] StringBuilder strSessionKey);
 
     [DllImport("rstrtmgr.dll")]
     private static extern int RmEndSession(uint pSessionHandle);
@@ -115,7 +120,7 @@ public static class FileLockInspector
                 Array.Empty<FileLockEntry>(), string.Empty);
         }
 
-        string sessionKey = Guid.NewGuid().ToString("N");
+        var sessionKey = new StringBuilder(CCH_RM_SESSION_KEY + 1);
         int startResult = RmStartSession(out uint sessionHandle, 0, sessionKey);
         if (startResult != ERROR_SUCCESS)
         {
