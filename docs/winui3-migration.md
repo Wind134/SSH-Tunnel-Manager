@@ -85,6 +85,9 @@ Verified checkpoint:
   detailed results, and the same process actions to the path-lock page.
 - Removed the migration-oriented overview page. SSH tunnels are now the default
   product entry, with independent persisted navigation for ports and file locks.
+- Replaced the physical-pixel startup size with a DPI-aware logical size policy.
+  The app clamps restored windows to a usable minimum and the current display
+  work area, then remembers the last non-maximized size with debounced writes.
 - Added a dependency-free GitHub Release checker/downloader. It accepts only
   `TinyTools-WinUI-*` assets and requires SHA-256 verification before making a
   download available to the user. ZIP updates use a guided manual replacement;
@@ -94,8 +97,8 @@ Verified checkpoint:
 
 Verified checkpoint:
 
-- Release WinUI build completes with zero warnings and all 28 automated tests
-  pass, including update selection and tamper rejection.
+- Release WinUI build completes with zero warnings and all 33 automated tests
+  pass, including window-size edge cases, update selection and tamper rejection.
 - Remaining Stage 3 acceptance work is live system-theme change observation,
   large-snapshot performance/accessibility testing, and full manual UI coverage.
 

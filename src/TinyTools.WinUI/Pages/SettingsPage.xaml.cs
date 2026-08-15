@@ -38,6 +38,8 @@ public sealed partial class SettingsPage : Page
                 ? seconds
                 : 0,
             ShowSystemProcesses = ShowSystemProcessesBox.IsChecked == true,
+            WindowWidth = App.Services.Settings.WindowWidth,
+            WindowHeight = App.Services.Settings.WindowHeight,
         };
 
         App.Services.SaveSettings(settings);

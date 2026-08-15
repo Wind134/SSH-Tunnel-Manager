@@ -11,6 +11,10 @@ public class AppSettings
     public string LastPage { get; set; } = "Tunnel";
     public int PortAutoRefreshSeconds { get; set; }
     public bool ShowSystemProcesses { get; set; }
+    // Stored as device-independent pixels so the window remains usable when
+    // Windows display scaling or the active monitor changes.
+    public double WindowWidth { get; set; } = 1120;
+    public double WindowHeight { get; set; } = 720;
 }
 
 public class ConfigFile

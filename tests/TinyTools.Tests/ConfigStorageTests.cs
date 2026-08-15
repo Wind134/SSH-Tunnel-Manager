@@ -27,6 +27,8 @@ public sealed class ConfigStorageTests : IDisposable
         Assert.Equal("HandleViewer", loaded.Settings.StartPage);
         Assert.True(loaded.Settings.ConfirmBeforeExit);
         Assert.Equal(10, loaded.Settings.PortAutoRefreshSeconds);
+        Assert.Equal(1180, loaded.Settings.WindowWidth);
+        Assert.Equal(760, loaded.Settings.WindowHeight);
         var tunnel = Assert.Single(loaded.Tunnels);
         Assert.Equal(id, tunnel.Id);
         Assert.Equal("primary", tunnel.Name);
@@ -56,7 +58,9 @@ public sealed class ConfigStorageTests : IDisposable
             Theme = "Light",
             StartPage = "Tunnel",
             ConfirmBeforeExit = false,
-            PortAutoRefreshSeconds = 30
+            PortAutoRefreshSeconds = 30,
+            WindowWidth = 1050,
+            WindowHeight = 650
         });
         var loaded = ConfigStorage.Load();
 
@@ -65,6 +69,8 @@ public sealed class ConfigStorageTests : IDisposable
         Assert.Equal("Tunnel", loaded.Settings.StartPage);
         Assert.False(loaded.Settings.ConfirmBeforeExit);
         Assert.Equal(30, loaded.Settings.PortAutoRefreshSeconds);
+        Assert.Equal(1050, loaded.Settings.WindowWidth);
+        Assert.Equal(650, loaded.Settings.WindowHeight);
     }
 
     public void Dispose() => DeleteTestFiles();
@@ -82,7 +88,9 @@ public sealed class ConfigStorageTests : IDisposable
             StartPage = "HandleViewer",
             LastPage = "Tunnel",
             PortAutoRefreshSeconds = 10,
-            ShowSystemProcesses = true
+            ShowSystemProcesses = true,
+            WindowWidth = 1180,
+            WindowHeight = 760
         },
         Tunnels =
         [

@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using SSHTunnelManager.Services;
 using TinyTools.Tray;
 using TinyTools.WinUI.Pages;
+using TinyTools.WinUI.Services;
 
 namespace TinyTools.WinUI;
 
@@ -18,6 +19,7 @@ public sealed partial class MainWindow : Window
     private bool _cleanupComplete;
     private bool _initialActivationApplied;
     private bool _exitConfirmationPending;
+    private readonly WindowPlacementManager _windowPlacement;
 
     public FrameworkElement RootElement => RootGrid;
 
@@ -28,7 +30,11 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.SetIcon("app.ico");
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1120, 720));
+        _windowPlacement = new WindowPlacementManager(
+            this,
+            () => App.Services.Settings,
+            ConfigStorage.SaveSettings);
+        _windowPlacement.Initialize();
         AppWindow.Closing += OnAppWindowClosing;
         Activated += OnActivated;
         App.Services.TunnelManager.HostKeyConfirmationRequested += ConfirmHostKeyAsync;
@@ -320,6 +326,7 @@ public sealed partial class MainWindow : Window
             return;
 
         _cleanupComplete = true;
+        _windowPlacement.Dispose();
         App.Services.TunnelManager.HostKeyConfirmationRequested -= ConfirmHostKeyAsync;
         _trayIcon?.Dispose();
         App.ShutdownServices();

@@ -5,6 +5,7 @@ using SSHTunnelManager.Converters;
 using SSHTunnelManager.Models;
 using SSHTunnelManager.Services;
 using TinyTools.Core.Processes;
+using TinyTools.Core.Windowing;
 
 namespace TinyTools.Tests;
 
@@ -99,6 +100,29 @@ public class CoreBehaviorTests
         Assert.True(settings.ShowTrayNotifications);
         Assert.Equal(0, settings.PortAutoRefreshSeconds);
         Assert.False(settings.ShowSystemProcesses);
+        Assert.Equal(1120, settings.WindowWidth);
+        Assert.Equal(720, settings.WindowHeight);
+    }
+
+    [Theory]
+    [InlineData(1120, 700, 1400, 900, 1120, 700)]
+    [InlineData(400, 300, 1400, 900, 960, 620)]
+    [InlineData(1800, 1200, 1400, 900, 1376, 876)]
+    [InlineData(double.NaN, double.PositiveInfinity, 1400, 900, 1120, 720)]
+    [InlineData(1120, 720, 900, 560, 876, 536)]
+    public void WindowSizePolicyClampsRememberedLogicalSize(
+        double rememberedWidth,
+        double rememberedHeight,
+        double availableWidth,
+        double availableHeight,
+        double expectedWidth,
+        double expectedHeight)
+    {
+        var size = WindowSizePolicy.Normalize(
+            rememberedWidth, rememberedHeight, availableWidth, availableHeight);
+
+        Assert.Equal(expectedWidth, size.Width);
+        Assert.Equal(expectedHeight, size.Height);
     }
 
     [Theory]
