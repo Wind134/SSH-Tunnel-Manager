@@ -39,6 +39,28 @@ public sealed class GitHubUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckPrefersWinUiInstallerAndItsChecksum()
+    {
+        using var client = new HttpClient(new StubHandler(_ => JsonResponse("""
+            {
+              "tag_name": "v1.1.0",
+              "html_url": "https://github.com/Wind134/SSH-Tunnel-Manager/releases/tag/v1.1.0",
+              "assets": [
+                { "name": "TinyTools-WinUI-v1.1.0-win-x64.zip", "browser_download_url": "https://example.test/winui.zip", "size": 100 },
+                { "name": "TinyTools-WinUI-v1.1.0-win-x64-Setup.exe", "browser_download_url": "https://example.test/setup.exe", "size": 200 },
+                { "name": "TinyTools-WinUI-v1.1.0-win-x64-Setup.exe.sha256", "browser_download_url": "https://example.test/setup.exe.sha256", "size": 64 }
+              ]
+            }
+            """)));
+        using var service = new GitHubUpdateService(client);
+
+        UpdateCheckResult result = await service.CheckAsync(new Version(1, 0, 0));
+
+        Assert.Equal("TinyTools-WinUI-v1.1.0-win-x64-Setup.exe", result.Package?.Name);
+        Assert.Equal(new Uri("https://example.test/setup.exe.sha256"), result.Package?.ChecksumUri);
+    }
+
+    [Fact]
     public async Task DownloadRejectsUnverifiedOrModifiedPackage()
     {
         byte[] packageBytes = Encoding.UTF8.GetBytes("modified package");
