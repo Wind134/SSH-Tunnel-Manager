@@ -10,47 +10,108 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid ColumnSpacing="12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBlock Text="端口与进程" Style="{StaticResource TitleTextBlockStyle}" />
-            <Button x:Name="RefreshButton" Grid.Column="1" Content="刷新" Click="RefreshButton_Click" />
+
+        <TextBlock Text="端口与进程" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="140" />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="RefreshButton" Content="刷新" Style="{StaticResource AccentButtonStyle}" Click="RefreshButton_Click" />
+            <ComboBox x:Name="KindFilter" Grid.Column="1" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                <ComboBoxItem Content="全部连接类型" Tag="All" />
+                <ComboBoxItem Content="仅监听" Tag="Listener" />
+                <ComboBoxItem Content="仅连接" Tag="Established" />
+            </ComboBox>
+            <ComboBox x:Name="FamilyFilter" Grid.Column="2" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                <ComboBoxItem Content="全部协议" Tag="All" />
+                <ComboBoxItem Content="IPv4" Tag="IPv4" />
+                <ComboBoxItem Content="IPv6" Tag="IPv6" />
+            </ComboBox>
+            <TextBox
+                x:Name="SearchBox"
+                Grid.Column="3"
+                PlaceholderText="筛选端口、PID、进程名或地址"
+                TextChanged="Filter_Changed" />
+            <CheckBox
+                x:Name="ShowSystem"
+                Grid.Column="4"
+                Content="系统进程"
+                VerticalAlignment="Center"
+                Checked="Filter_Changed"
+                Unchecked="Filter_Changed" />
         </Grid>
-        <InfoBar Grid.Row="1" IsOpen="True" IsClosable="False" Severity="Informational"
-                 Message="POC 结论：使用原生虚拟化 ListView + 固定列布局，避免引入 2021 年后未更新的 DataGrid。" />
+
         <Grid Grid.Row="2" Padding="12,8" ColumnSpacing="12" Background="{ThemeResource LayerFillColorDefaultBrush}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="70" /><ColumnDefinition Width="150" /><ColumnDefinition Width="80" />
-                <ColumnDefinition Width="180" /><ColumnDefinition Width="80" /><ColumnDefinition Width="*" />
+                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="1.3*" />
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="1.5*" />
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="1.3*" />
+                <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="PID" Style="{StaticResource CaptionTextBlockStyle}" />
-            <TextBlock Grid.Column="1" Text="进程" Style="{StaticResource CaptionTextBlockStyle}" />
-            <TextBlock Grid.Column="2" Text="协议" Style="{StaticResource CaptionTextBlockStyle}" />
-            <TextBlock Grid.Column="3" Text="本地地址" Style="{StaticResource CaptionTextBlockStyle}" />
-            <TextBlock Grid.Column="4" Text="端口" Style="{StaticResource CaptionTextBlockStyle}" />
-            <TextBlock Grid.Column="5" Text="状态 / 远端" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Text="状态" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="1" Text="协议" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="2" Text="本地地址" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="3" Text="端口" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="4" Text="远端" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="5" Text="PID" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="6" Text="进程" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="7" Text="可执行路径" Style="{StaticResource CaptionTextBlockStyle}" />
         </Grid>
+
         <ListView x:Name="PortList" Grid.Row="3" SelectionMode="Single">
-            <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Vertical" /></ItemsPanelTemplate></ListView.ItemsPanel>
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate><ItemsStackPanel Orientation="Vertical" /></ItemsPanelTemplate>
+            </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid Padding="12,8" ColumnSpacing="12">
+                        <Grid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="打开进程所在目录" Tag="{Binding}" Click="OpenDirectory_Click" />
+                                <MenuFlyoutItem Text="强制终止进程" Tag="{Binding}" Click="TerminateProcess_Click" />
+                                <MenuFlyoutSeparator />
+                                <MenuFlyoutItem Text="复制详情" Tag="{Binding}" Click="CopyDetails_Click" />
+                            </MenuFlyout>
+                        </Grid.ContextFlyout>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="70" /><ColumnDefinition Width="150" /><ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="180" /><ColumnDefinition Width="80" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="1.3*" />
+                            <ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="1.5*" />
+                            <ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="1.3*" />
+                            <ColumnDefinition Width="2*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Pid}" />
-                        <TextBlock Grid.Column="1" Text="{Binding ProcessName}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="2" Text="{Binding Family}" />
-                        <TextBlock Grid.Column="3" Text="{Binding LocalAddress}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="4" Text="{Binding LocalPort}" />
-                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding State}" />
-                            <TextBlock Text="{Binding RemoteAddress}" Opacity="0.7" />
-                        </StackPanel>
+                        <TextBlock Text="{Binding State}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Family}" />
+                        <TextBlock Grid.Column="2" Text="{Binding LocalAddress}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{Binding LocalPort}" />
+                        <TextBlock Grid.Column="4" Text="{Binding RemoteEndpoint}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="5" Text="{Binding Pid}" />
+                        <TextBlock Grid.Column="6" Text="{Binding ProcessName}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="7" Text="{Binding ProcessPath}" TextTrimming="CharacterEllipsis" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-        <TextBlock x:Name="StatusText" Grid.Row="4" Opacity="0.7" />
+
+        <Grid Grid.Row="4" ColumnSpacing="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ProgressRing x:Name="RefreshProgress" Width="18" Height="18" IsActive="False" />
+            <TextBlock x:Name="StatusText" Grid.Column="1" Opacity="0.7" TextWrapping="Wrap" />
+        </Grid>
     </Grid>
 </Page>

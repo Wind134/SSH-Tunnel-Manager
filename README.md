@@ -1,96 +1,98 @@
 # TinyTools
 
-TinyTools 是一个面向 Windows 10/11 的轻量桌面工具集。目前包含 SSH 隧道管理器和句柄查看器，使用 .NET 8 与 WPF 开发。
+一款为 Windows 11 重新设计的轻量桌面工具箱：在同一个原生应用里管理 SSH 隧道、查看端口进程，以及定位占用文件或文件夹的程序。
 
-## 功能
+[下载最新版本](https://github.com/Wind134/SSH-Tunnel-Manager/releases/latest) · [迁移进度](docs/winui3-migration.md) · [发布检查清单](docs/发布检查清单.md)
 
-### SSH 隧道管理器
+## 一个应用，处理三类日常问题
 
-- 创建、编辑、删除以及批量启动/停止 SSH 反向隧道
-- 支持密码和 OpenSSH 私钥认证
-- 首次连接确认 Host Key 指纹，后续连接自动校验
-- 使用 Windows DPAPI 加密保存主机地址和密码
-- SSH 断线检测与最多 5 次自动重连
-- 隧道连通性检测和运行日志
-- 浅色、深色及跟随系统主题
+### SSH 隧道
 
-### 句柄查看器
+- 创建、编辑、删除并批量启动或停止 SSH 反向隧道
+- 支持密码与 OpenSSH 私钥认证
+- 首次连接显示 Host Key 指纹，已信任密钥发生变化时阻止连接
+- 断线检测与自动重连，状态和日志在应用内持续更新
+- 主机地址与密码由 Windows DPAPI 加密，绑定当前 Windows 用户
 
-- 查看 IPv4/IPv6 TCP 监听端口和连接对应的进程
-- 按端口、PID、进程名或地址筛选
-- 打开进程所在目录、复制详情或终止进程
-- 查询占用指定文件或文件夹的进程，支持路径选择、拖放和安全递归扫描
-- 对关键系统进程提供终止保护
+### 端口与进程
 
-### 应用外壳
+- 查看 IPv4/IPv6 TCP 监听端口与已建立连接
+- 按连接类型、协议、端口、PID、进程名或地址即时筛选
+- 支持按设置自动刷新，并可隐藏系统内核记录
+- 右键复制详情、打开进程所在目录或强制终止进程树
+- PID 0/4 禁止终止；关键 Windows 进程会显示明确的高风险确认
 
-- 两个工具共用 TinyTools 导航入口
-- 设置入口位于左下角，由 TinyTools 统一管理
-- 单实例运行
-- 可在启动时最小化到系统托盘
-- 可配置关闭窗口时进入托盘或直接退出
-- 可选择默认启动页面或记住上次使用的工具
-- 可配置退出确认、托盘通知和句柄查看器自动刷新
-- 自包含单文件发布，目标机器无需预装 .NET
+### 文件和文件夹占用
+
+- 直接拖入文件或文件夹，也可以使用原生选择器或输入路径
+- 递归查询文件夹内被占用的文件，显示进程、应用名、启动时间和路径
+- 大目录扫描可随时取消；无法访问的目录和扫描上限会明确提示
+- 占用结果同样支持打开目录、复制详情和安全的进程终止流程
+
+## Windows 11 原生体验
+
+新的应用层使用 WinUI 3 / Windows App SDK 构建，采用原生标题栏、NavigationView、Mica、Fluent 控件和克制的页面切换动画。Windows 10 会自动使用普通主题背景，不依赖 Mica 也能正常使用。
+
+- 浅色、深色和跟随系统主题
+- 单实例运行、系统托盘、关闭到托盘和通知
+- 记住上次页面，也可指定 SSH、端口或文件占用为启动页
+- unpackaged、self-contained、单文件发布，目标电脑无需预装 .NET
+- 配置备份、原子保存以及旧版本配置自动迁移
+
+## 下载与更新
+
+GitHub Release 提供便携 ZIP；正式切换前仍保留 WPF 安装包作为回退。WinUI 包使用以下独立命名，避免与旧应用混淆：
+
+```text
+TinyTools-WinUI-v<版本>-win-x64.zip
+TinyTools-WinUI-v<版本>-win-x64.zip.sha256
+```
+
+WinUI 应用可在“设置 → 关于与更新”中检查 GitHub 最新版本。下载器只接受 WinUI 命名的资产，并在交付前验证 SHA-256。ZIP 下载完成后会引导退出应用并覆盖程序文件；配置位于独立 `data` 目录，不包含在更新包中。未来 WinUI 安装包完成验收后，应用可以在用户确认后启动安装程序完成升级。
 
 ## 系统要求
 
-- Windows 10 20H1（版本 2004）或更高版本
-- 构建需要 .NET 8 SDK 或更高版本
-- SSH 隧道功能需要可访问的 SSH Server；本地代理需由 Clash、v2ray 等程序提供
-- 查看部分系统进程或终止进程时可能需要管理员权限
+- Windows 10 x64 或 Windows 11 x64；项目最低目标为 Windows 10 build 17763
+- SSH 功能需要能够访问 SSH Server；本地代理需由 Clash、v2ray 等程序提供
+- 查看或终止受保护进程时可能需要管理员权限
 
-## 构建与测试
+## 隐私与安全
 
-在仓库根目录运行：
+TinyTools 不需要账户，也不会上传隧道配置、进程列表或文件路径。更新检查只访问公开的 GitHub Releases API。主机地址与密码使用 DPAPI 加密；私钥文件只保存本地路径，不会被复制进配置。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1
-```
-
-该脚本依次恢复依赖、运行测试，并将 win-x64 自包含单文件版本发布到 `src\TinyTools\publish`。仅发布、不运行测试：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -SkipTests
-```
-
-安装 Inno Setup 7 后，还可以同时生成 Windows 安装程序：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Installer
-```
-
-安装程序默认输出到 `artifacts\installer`，采用当前用户安装模式，不需要管理员权限。它会创建开始菜单快捷方式，并允许用户选择是否创建桌面快捷方式。覆盖安装和卸载不会主动删除运行时生成的 `data` 配置目录。
-
-也可以分别运行：
-
-```powershell
-dotnet test .\tests\TinyTools.Tests\TinyTools.Tests.csproj -c Release
-dotnet build .\src\TinyTools\TinyTools.csproj -c Release
-```
-
-## 配置与日志
-
-运行时数据位于可执行文件旁的 `data` 目录：
+运行时数据默认位于可执行文件旁：
 
 ```text
-TinyTools.exe
+TinyTools.WinUI.exe
 data/
 ├── config.json
 ├── config.json.bak
 └── crash.log
 ```
 
-保存配置时会先保留上一版备份，并通过临时文件原子替换主配置。旧版本位于 `%APPDATA%\SSHTunnelManager\config.json` 的配置会在首次启动时自动迁移。
+请将便携版放在当前用户可写的位置。旧版 `%APPDATA%\SSHTunnelManager\config.json` 会在首次启动时自动迁移。
 
-主机地址和密码由 DPAPI 加密，绑定当前 Windows 用户。私钥文件只保存路径，不复制私钥内容。请将整个 TinyTools 目录放在当前用户可写的位置，否则配置和崩溃日志无法写入。
+## 开发与验证
 
-## 发布
+运行自动化测试和 WinUI Release 构建：
 
-推送 `v*` 标签后，[GitHub Actions](.github/workflows/release.yml) 会运行测试，并同时生成便携版 `TinyTools-<版本>-win-x64.zip` 与安装版 `TinyTools-<版本>-win-x64-Setup.exe`，随后创建 GitHub Release。手动运行工作流只生成可下载的构建产物，不创建 Release。
+```powershell
+dotnet test .\tests\TinyTools.Tests\TinyTools.Tests.csproj -c Release
+dotnet build .\src\TinyTools.WinUI\TinyTools.WinUI.csproj -c Release
+```
 
-## 当前状态
+生成 unpackaged、self-contained、单文件 WinUI 版本：
 
-核心功能已经完成并可构建发布。自动化测试覆盖配置读写与备份恢复、DPAPI 加解密、模型复制、转换器和文件锁空结果等基础行为。SSH 连接、网络中断重连、Host Key 变更及需要管理员权限的操作仍应在真实 Windows 环境中进行发布前验收。
+```powershell
+dotnet publish .\src\TinyTools.WinUI\TinyTools.WinUI.csproj `
+  -c Release -r win-x64 --self-contained true `
+  -p:PublishProfile=win-x64 -o .\artifacts\winui
+```
 
-详细设计背景见 [技术方案 v2](docs/方案-v2.md)；该文档记录了最初的 SSH 模块设计，实际产品结构以本 README 和当前代码为准。
+现有 `build.ps1` 和 Inno Setup 脚本继续生成 WPF 稳定版，直至 WinUI 完成功能、安装升级和真机验收。推送 `v*` 标签后，GitHub Actions 会运行测试，生成 WPF 回退产物以及带 SHA-256 的 WinUI ZIP，并创建 GitHub Release。
+
+## 迁移状态
+
+WinUI 应用已覆盖 SSH 管理、Host Key 校验、自动重连、端口/进程查看、文件/文件夹占用、设置、主题、托盘、单实例、通知、配置迁移和 GitHub 更新下载。WPF 源码与发布链仍然保留，待 Windows 10/11 真机矩阵、WinUI Inno Setup 安装/升级以及完整可访问性验收通过后再进行发布切换。
+
+详细的阶段记录、技术取舍和剩余验收项见 [WinUI 3 迁移文档](docs/winui3-migration.md)。

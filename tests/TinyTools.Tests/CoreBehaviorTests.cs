@@ -4,6 +4,7 @@ using HandleViewer.Services;
 using SSHTunnelManager.Converters;
 using SSHTunnelManager.Models;
 using SSHTunnelManager.Services;
+using TinyTools.Core.Processes;
 
 namespace TinyTools.Tests;
 
@@ -98,6 +99,27 @@ public class CoreBehaviorTests
         Assert.True(settings.ShowTrayNotifications);
         Assert.Equal(0, settings.PortAutoRefreshSeconds);
         Assert.False(settings.ShowSystemProcesses);
+    }
+
+    [Theory]
+    [InlineData(0, "System", ProcessRiskLevel.Blocked)]
+    [InlineData(4, "System", ProcessRiskLevel.Blocked)]
+    [InlineData(900, "svchost", ProcessRiskLevel.Critical)]
+    [InlineData(901, "explorer", ProcessRiskLevel.Critical)]
+    [InlineData(902, "notepad", ProcessRiskLevel.Standard)]
+    public void ProcessActionsClassifyTerminationRisk(
+        int processId,
+        string processName,
+        ProcessRiskLevel expected)
+        => Assert.Equal(expected, ProcessActionService.AssessRisk(processId, processName).Level);
+
+    [Fact]
+    public void ProcessActionsResolveExecutableDirectory()
+    {
+        Assert.Equal(
+            Path.GetFullPath(@"C:\Windows\System32"),
+            ProcessActionService.GetExecutableDirectory(@"C:\Windows\System32\notepad.exe"));
+        Assert.Null(ProcessActionService.GetExecutableDirectory(null));
     }
 
     [Fact]

@@ -51,9 +51,9 @@ public sealed partial class MainWindow : Window
             .First(item => string.Equals(item.Tag?.ToString(), initialTag, StringComparison.Ordinal));
         Navigate(initialTag switch
         {
-            "tunnels" => typeof(TunnelsPage),
             "ports" => typeof(PortsPage),
-            _ => typeof(OverviewPage),
+            "locks" => typeof(FileLocksPage),
+            _ => typeof(TunnelsPage),
         });
     }
 
@@ -64,9 +64,9 @@ public sealed partial class MainWindow : Window
             : App.Services.Settings.StartPage;
         return page switch
         {
-            "Tunnel" => "tunnels",
             "HandleViewer" => "ports",
-            _ => "overview",
+            "FileLocks" => "locks",
+            _ => "tunnels",
         };
     }
 
@@ -91,7 +91,12 @@ public sealed partial class MainWindow : Window
         string? tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag?.ToString();
         if (tag is "tunnels" or "ports" or "locks")
         {
-            App.Services.Settings.LastPage = tag == "tunnels" ? "Tunnel" : "HandleViewer";
+            App.Services.Settings.LastPage = tag switch
+            {
+                "ports" => "HandleViewer",
+                "locks" => "FileLocks",
+                _ => "Tunnel",
+            };
             ConfigStorage.SaveSettings(App.Services.Settings);
         }
         Navigate(tag switch
@@ -99,7 +104,7 @@ public sealed partial class MainWindow : Window
             "tunnels" => typeof(TunnelsPage),
             "ports" => typeof(PortsPage),
             "locks" => typeof(FileLocksPage),
-            _ => typeof(OverviewPage),
+            _ => typeof(TunnelsPage),
         });
     }
 

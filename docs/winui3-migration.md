@@ -27,9 +27,10 @@
    19041 as the existing app does.
 4. Use Mica only when supported. Windows 10 uses the normal theme background.
 5. Do not use `CommunityToolkit.WinUI.UI.Controls.DataGrid` 7.1.2: the package's
-   last stable update was in 2021. The port-table POC uses WinUI's virtualizing
-   `ListView` and a deterministic grid row. Re-evaluate `WinUI.TableView` only if
-   sorting, column resizing, or accessibility requirements outgrow this POC.
+   last stable update was in 2021. The production port table uses WinUI's
+   virtualizing `ListView` and a deterministic grid row without adding a UI
+   dependency. Re-evaluate `WinUI.TableView` only if sorting, column resizing,
+   or accessibility requirements outgrow this implementation.
 6. Keep unpackaged + self-contained deployment. The publish profile carries the
    Windows App SDK single-file requirements; first launch extracts bundled
    content to a temporary location by design.
@@ -76,17 +77,31 @@ Verified checkpoint:
   real-process smoke test covers first launch, second-instance activation,
   close-to-tray, restore and crash-log absence.
 
-### Stage 3 — inspection and settings parity
+### Stage 3 — inspection, process actions and updates (completed 2026-08-15)
 
-- Complete port filtering, refresh policy, process details/termination, and
-  accessible keyboard navigation; measure virtualization with large snapshots.
-- Add file/folder pickers, drag/drop, cancellation, open-location and terminate
-  workflows to the path-lock page.
-- Finish all settings, system theme change observation, and persisted navigation.
+- Completed port filtering, refresh policy, virtualized results, copy/open
+  actions, and guarded process-tree termination.
+- Added file/folder pickers, page-wide drag/drop, cancellable recursive scans,
+  detailed results, and the same process actions to the path-lock page.
+- Removed the migration-oriented overview page. SSH tunnels are now the default
+  product entry, with independent persisted navigation for ports and file locks.
+- Added a dependency-free GitHub Release checker/downloader. It accepts only
+  `TinyTools-WinUI-*` assets and requires SHA-256 verification before making a
+  download available to the user. ZIP updates use a guided manual replacement;
+  a future WinUI installer can be launched only after explicit confirmation.
+- The release workflow now publishes a versioned WinUI ZIP and checksum beside
+  the stable WPF fallback artifacts.
+
+Verified checkpoint:
+
+- Release WinUI build completes with zero warnings and all 28 automated tests
+  pass, including update selection and tamper rejection.
+- Remaining Stage 3 acceptance work is live system-theme change observation,
+  large-snapshot performance/accessibility testing, and full manual UI coverage.
 
 ### Stage 4 — release cutover
 
-- Add WinUI ZIP and Inno Setup outputs beside WPF, then test clean install,
+- Add the WinUI Inno Setup output beside the existing verified ZIP, then test clean install,
   first-launch extraction, in-place upgrade, uninstall, and config preservation.
 - Run the complete acceptance matrix on Windows 10 and Windows 11.
 - Switch release defaults only after approval; keep the WPF source/tag as a

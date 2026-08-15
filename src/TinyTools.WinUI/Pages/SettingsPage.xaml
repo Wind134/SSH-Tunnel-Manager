@@ -19,6 +19,7 @@
                     <ComboBoxItem Content="上次使用" Tag="LastUsed" />
                     <ComboBoxItem Content="SSH 隧道" Tag="Tunnel" />
                     <ComboBoxItem Content="端口与进程" Tag="HandleViewer" />
+                    <ComboBoxItem Content="文件和文件夹占用" Tag="FileLocks" />
                 </ComboBox>
             </Grid>
             <CheckBox x:Name="AutoStartMinimizedBox" Content="启动后直接最小化到托盘" />
@@ -36,6 +37,31 @@
                 <ComboBoxItem Content="每 30 秒" Tag="30" />
             </ComboBox>
             <CheckBox x:Name="ShowSystemProcessesBox" Content="显示系统进程" />
+
+            <TextBlock Text="关于与更新" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <TextBlock x:Name="CurrentVersionText" Opacity="0.72" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="CheckUpdateButton" Content="检查更新" Click="CheckUpdate_Click" />
+                <Button
+                    x:Name="DownloadUpdateButton"
+                    Content="下载并更新"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="DownloadUpdate_Click" />
+                <Button
+                    x:Name="OpenReleasePageButton"
+                    Content="查看发布页"
+                    Visibility="Collapsed"
+                    Click="OpenReleasePage_Click" />
+            </StackPanel>
+            <ProgressBar
+                x:Name="UpdateProgress"
+                Width="420"
+                HorizontalAlignment="Left"
+                Minimum="0"
+                Maximum="100"
+                Visibility="Collapsed" />
+            <InfoBar x:Name="UpdateBar" IsOpen="False" IsClosable="True" />
 
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Content="保存设置" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" />

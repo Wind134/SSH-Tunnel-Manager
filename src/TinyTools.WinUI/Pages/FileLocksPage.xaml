@@ -2,29 +2,121 @@
     x:Class="TinyTools.WinUI.Pages.FileLocksPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Padding="32" RowSpacing="12">
+    <Grid
+        Padding="32"
+        RowSpacing="12"
+        AllowDrop="True"
+        DragOver="Page_DragOver"
+        Drop="Page_Drop">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" /><RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+
         <TextBlock Text="文件和文件夹占用" Style="{StaticResource TitleTextBlockStyle}" />
-        <Grid Grid.Row="1" ColumnSpacing="8">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBox x:Name="PathBox" PlaceholderText="输入文件或文件夹完整路径" />
-            <Button x:Name="QueryButton" Grid.Column="1" Content="查询" Click="QueryButton_Click" />
+
+        <Border
+            Grid.Row="1"
+            Padding="18,14"
+            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                <FontIcon Glyph="&#xE7C3;" FontSize="24" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <StackPanel>
+                    <TextBlock Text="将文件或文件夹拖到这里" FontWeight="SemiBold" />
+                    <TextBlock Text="拖入后会立即查询；也可以在下方选择或输入路径。" Opacity="0.68" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox
+                x:Name="PathBox"
+                PlaceholderText="输入文件或文件夹完整路径，按 Enter 查询"
+                KeyDown="PathBox_KeyDown" />
+            <Button Grid.Column="1" Content="选择文件" Click="ChooseFile_Click" />
+            <Button Grid.Column="2" Content="选择文件夹" Click="ChooseFolder_Click" />
+            <Button
+                x:Name="QueryButton"
+                Grid.Column="3"
+                Content="查询"
+                Style="{StaticResource AccentButtonStyle}"
+                Click="QueryButton_Click" />
+            <Button
+                x:Name="CancelButton"
+                Grid.Column="4"
+                Content="取消"
+                IsEnabled="False"
+                Click="CancelButton_Click" />
         </Grid>
-        <TextBlock x:Name="QueryStatus" Grid.Row="2" Opacity="0.7" TextWrapping="Wrap" />
-        <ListView x:Name="LockList" Grid.Row="3" SelectionMode="None">
+
+        <Grid Grid.Row="3" Padding="12,8" ColumnSpacing="12" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="130" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="PID" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="1" Text="进程" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="2" Text="应用名称" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="3" Text="启动时间" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock Grid.Column="4" Text="可执行路径" Style="{StaticResource CaptionTextBlockStyle}" />
+        </Grid>
+
+        <ListView x:Name="LockList" Grid.Row="4" SelectionMode="Single">
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate><ItemsStackPanel Orientation="Vertical" /></ItemsPanelTemplate>
+            </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid Padding="12,8" ColumnSpacing="12">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="80" /><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <Grid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="打开进程所在目录" Tag="{Binding}" Click="OpenDirectory_Click" />
+                                <MenuFlyoutItem Text="强制终止进程" Tag="{Binding}" Click="TerminateProcess_Click" />
+                                <MenuFlyoutSeparator />
+                                <MenuFlyoutItem Text="复制详情" Tag="{Binding}" Click="CopyDetails_Click" />
+                            </MenuFlyout>
+                        </Grid.ContextFlyout>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Pid}" />
-                        <TextBlock Grid.Column="1" Text="{Binding ProcessName}" />
-                        <TextBlock Grid.Column="2" Text="{Binding ProcessPath}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding ProcessName}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{Binding StartTime}" />
+                        <TextBlock Grid.Column="4" Text="{Binding ProcessPath}" TextTrimming="CharacterEllipsis" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <Grid Grid.Row="5" ColumnSpacing="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ProgressRing x:Name="QueryProgress" Width="18" Height="18" IsActive="False" />
+            <TextBlock x:Name="QueryStatus" Grid.Column="1" Opacity="0.7" TextWrapping="Wrap" />
+        </Grid>
     </Grid>
 </Page>

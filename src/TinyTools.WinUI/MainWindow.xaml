@@ -26,9 +26,6 @@
             PaneDisplayMode="Auto"
             SelectionChanged="Navigation_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="概览" Tag="overview">
-                    <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
-                </NavigationViewItem>
                 <NavigationViewItem Content="SSH 隧道" Tag="tunnels">
                     <NavigationViewItem.Icon><SymbolIcon Symbol="Switch" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
