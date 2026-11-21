@@ -148,6 +148,33 @@ public class CoreBehaviorTests
             UpdateInstallerLauncher.CreateUpgradeStartInfo(@"C:\Temp\TinyTools.zip", 100, @"C:\App"));
     }
 
+    [Fact]
+    public void UpdatePackageCleanerRemovesInstalledVersionsAndKeepsNewerOnes()
+    {
+        string root = CreateTemporaryDirectory();
+        try
+        {
+            string oldDir = Directory.CreateDirectory(Path.Combine(root, "1.1.0")).FullName;
+            string currentDir = Directory.CreateDirectory(Path.Combine(root, "1.2.2")).FullName;
+            string newerDir = Directory.CreateDirectory(Path.Combine(root, "1.3.0")).FullName;
+            File.WriteAllText(Path.Combine(oldDir, "setup.exe"), "old");
+            File.WriteAllText(Path.Combine(currentDir, "setup.exe"), "current");
+            File.WriteAllText(Path.Combine(newerDir, "setup.exe"), "newer");
+
+            int removed = UpdatePackageCleaner.CleanupInstalledPackages(root, new Version(1, 2, 2));
+
+            Assert.Equal(2, removed);
+            Assert.False(Directory.Exists(oldDir));
+            Assert.False(Directory.Exists(currentDir));
+            Assert.True(Directory.Exists(newerDir));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData(0, "System", ProcessRiskLevel.Blocked)]
     [InlineData(4, "System", ProcessRiskLevel.Blocked)]

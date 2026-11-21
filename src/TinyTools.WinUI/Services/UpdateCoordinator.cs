@@ -62,6 +62,31 @@ public sealed class UpdateCoordinator : IDisposable
     }
 
     /// <summary>
+    /// 后台清理已完成安装的旧安装包（版本号小于等于当前版本）。
+    /// </summary>
+    public async Task CleanupObsoleteInstallersAsync()
+    {
+        if (_disposed)
+            return;
+
+        try
+        {
+            // 等待刚结束的安装程序释放自身文件句柄
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            if (_disposed)
+                return;
+
+            string updatesRoot = UpdatePackageCleaner.GetUpdatesRootDirectory();
+            Version current = GetCurrentVersion();
+            await Task.Run(() => UpdatePackageCleaner.CleanupInstalledPackages(updatesRoot, current));
+        }
+        catch
+        {
+            // 清理缓存失败不影响主流程
+        }
+    }
+
+    /// <summary>
     /// 启动后静默检查更新，仅在发现新版本时通知界面，网络异常不打扰用户。
     /// </summary>
     public async Task CheckSilentlyOnStartupAsync()
@@ -163,9 +188,7 @@ public sealed class UpdateCoordinator : IDisposable
         try
         {
             string destinationDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TinyTools",
-                "Updates",
+                UpdatePackageCleaner.GetUpdatesRootDirectory(),
                 checkResult.LatestVersion.ToString());
 
             var progress = new Progress<UpdateDownloadProgress>(value =>
