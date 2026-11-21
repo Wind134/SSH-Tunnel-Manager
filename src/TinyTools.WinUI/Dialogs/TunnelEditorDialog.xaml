@@ -5,10 +5,11 @@
     PrimaryButtonText="保存"
     CloseButtonText="取消"
     DefaultButton="Primary"
+    Opened="OnOpened"
     PrimaryButtonClick="OnPrimaryButtonClick">
 
-    <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
-        <StackPanel Width="520" Spacing="12" Padding="0,4,0,0">
+    <ScrollViewer x:Name="ContentScrollViewer" VerticalScrollBarVisibility="Auto">
+        <StackPanel MinWidth="360" MaxWidth="500" Spacing="12" Padding="0,4,12,0">
             <InfoBar x:Name="ErrorBar" IsOpen="False" IsClosable="False" Severity="Error" />
 
             <Grid ColumnSpacing="8">
@@ -23,14 +24,14 @@
 
             <TextBox x:Name="NameBox" Header="名称" PlaceholderText="例如：生产环境" />
             <Grid ColumnSpacing="12">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
                 <TextBox x:Name="UserBox" Header="SSH 用户名" />
                 <NumberBox x:Name="SshPortBox" Grid.Column="1" Header="SSH 端口"
                            Minimum="1" Maximum="65535" Value="22" SpinButtonPlacementMode="Compact" />
             </Grid>
             <PasswordBox x:Name="HostBox" Header="SSH 地址" PasswordRevealMode="Peek" />
 
-            <ComboBox x:Name="AuthBox" Header="认证方式" SelectionChanged="AuthBox_SelectionChanged">
+            <ComboBox x:Name="AuthBox" Header="认证方式" HorizontalAlignment="Stretch" SelectionChanged="AuthBox_SelectionChanged">
                 <ComboBoxItem Content="密码" Tag="Password" />
                 <ComboBoxItem Content="私钥" Tag="PrivateKey" />
             </ComboBox>

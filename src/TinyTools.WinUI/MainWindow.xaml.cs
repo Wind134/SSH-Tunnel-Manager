@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
     private bool _cleanupComplete;
     private bool _initialActivationApplied;
     private bool _exitConfirmationPending;
+    private bool _updateBannerDismissed;
     private readonly WindowPlacementManager _windowPlacement;
 
     public FrameworkElement RootElement => RootGrid;
@@ -30,17 +31,20 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.SetIcon("app.ico");
+
         _windowPlacement = new WindowPlacementManager(
             this,
             () => App.Services.Settings,
             ConfigStorage.SaveSettings);
         _windowPlacement.Initialize();
+
         AppWindow.Closing += OnAppWindowClosing;
         Activated += OnActivated;
         App.Services.TunnelManager.HostKeyConfirmationRequested += ConfirmHostKeyAsync;
+        App.Services.UpdateCoordinator.StateChanged += OnUpdateStateChanged;
+        UpdateBanner.CloseButtonClick += (_, _) => _updateBannerDismissed = true;
 
-        // Mica is Windows 11-only. Keeping the root transparent lets WinUI use
-        // its normal solid theme background when the system backdrop is absent.
+        // 仅 Windows 11 启用 Mica，Windows 10 自动回退到标准主题背景
         if (MicaController.IsSupported())
             SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
 
@@ -61,6 +65,18 @@ public sealed partial class MainWindow : Window
             "locks" => typeof(FileLocksPage),
             _ => typeof(TunnelsPage),
         });
+
+        if (App.Services.Settings.CheckUpdatesOnStartup)
+            _ = App.Services.UpdateCoordinator.CheckSilentlyOnStartupAsync();
+    }
+
+    /// <summary>
+    /// 安装升级时强制退出主窗口，跳过托盘隐藏与二次确认。
+    /// </summary>
+    public void ForceExitForUpdate()
+    {
+        _forceClose = true;
+        Close();
     }
 
     private static string GetInitialNavigationTag()
@@ -86,10 +102,45 @@ public sealed partial class MainWindow : Window
             MinimizeToTray(showNotification: false);
     }
 
+    private void OnUpdateStateChanged(UpdateStateSnapshot snapshot)
+    {
+        bool hasNewVersion = snapshot.Phase is UpdatePhase.UpdateAvailable or UpdatePhase.ReadyToInstall
+            && snapshot.CheckResult?.IsUpdateAvailable == true;
+
+        if (!hasNewVersion)
+        {
+            UpdateBanner.IsOpen = false;
+            return;
+        }
+
+        // 已在设置页或用户手动关闭横幅时不再重复弹出
+        if (_updateBannerDismissed || ContentFrame.CurrentSourcePageType == typeof(SettingsPage))
+            return;
+
+        UpdateBanner.Title = $"发现新版本 v{snapshot.CheckResult!.LatestVersion}";
+        UpdateBanner.Message = snapshot.Phase == UpdatePhase.ReadyToInstall
+            ? "安装包已下载完成，点击前往设置页立即安装。"
+            : "新版本已发布，支持直接下载安装包完成升级。";
+        UpdateBanner.IsOpen = true;
+    }
+
+    private void GoToUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateBanner.IsOpen = false;
+        NavigateToSettings();
+    }
+
+    private void NavigateToSettings()
+    {
+        Navigation.SelectedItem = Navigation.SettingsItem;
+        Navigate(typeof(SettingsPage));
+    }
+
     private void Navigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         if (args.IsSettingsSelected)
         {
+            UpdateBanner.IsOpen = false;
             Navigate(typeof(SettingsPage));
             return;
         }
@@ -105,6 +156,7 @@ public sealed partial class MainWindow : Window
             };
             ConfigStorage.SaveSettings(App.Services.Settings);
         }
+
         Navigate(tag switch
         {
             "tunnels" => typeof(TunnelsPage),
@@ -214,7 +266,7 @@ public sealed partial class MainWindow : Window
                         return;
                     }
 
-                    var content = new StackPanel { Spacing = 10, Width = 520 };
+                    var content = new StackPanel { Spacing = 10, MaxWidth = 480 };
                     content.Children.Add(new TextBlock
                     {
                         Text = request.IsChangedKey
@@ -307,7 +359,7 @@ public sealed partial class MainWindow : Window
         _trayIcon.SettingsRequested += () => DispatcherQueue.TryEnqueue(() =>
         {
             RestoreAndActivate();
-            Navigate(typeof(SettingsPage));
+            NavigateToSettings();
         });
         _trayIcon.ExitRequested += () => DispatcherQueue.TryEnqueue(async () =>
             await RequestExitAsync());
@@ -328,6 +380,7 @@ public sealed partial class MainWindow : Window
         _cleanupComplete = true;
         _windowPlacement.Dispose();
         App.Services.TunnelManager.HostKeyConfirmationRequested -= ConfirmHostKeyAsync;
+        App.Services.UpdateCoordinator.StateChanged -= OnUpdateStateChanged;
         _trayIcon?.Dispose();
         App.ShutdownServices();
     }

@@ -6,14 +6,14 @@
 
     <Grid x:Name="RootGrid" Background="Transparent">
         <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
+            <RowDefinition Height="44" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="16,0,0,0" Background="Transparent">
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="14,0,0,0" Background="Transparent">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <FontIcon Glyph="&#xE71B;" FontSize="16" />
-                <TextBlock Text="TinyTools" Style="{StaticResource CaptionTextBlockStyle}" />
+                <Image Source="ms-appx:///Assets/app-logo.png" Width="20" Height="20" />
+                <TextBlock Text="TinyTools" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 
@@ -23,6 +23,9 @@
             IsBackButtonVisible="Collapsed"
             IsSettingsVisible="True"
             IsTitleBarAutoPaddingEnabled="False"
+            OpenPaneLength="210"
+            CompactModeThresholdWidth="640"
+            ExpandedModeThresholdWidth="1040"
             PaneDisplayMode="Auto"
             SelectionChanged="Navigation_SelectionChanged">
             <NavigationView.MenuItems>
@@ -36,7 +39,27 @@
                     <NavigationViewItem.Icon><SymbolIcon Symbol="Document" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
-            <Frame x:Name="ContentFrame" />
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <InfoBar
+                    x:Name="UpdateBanner"
+                    Grid.Row="0"
+                    Margin="20,12,20,0"
+                    IsOpen="False"
+                    IsClosable="True"
+                    Severity="Informational">
+                    <InfoBar.ActionButton>
+                        <Button Content="前往更新" Style="{StaticResource AccentButtonStyle}" Click="GoToUpdate_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
+                <Frame x:Name="ContentFrame" Grid.Row="1" />
+            </Grid>
         </NavigationView>
     </Grid>
 </Window>
