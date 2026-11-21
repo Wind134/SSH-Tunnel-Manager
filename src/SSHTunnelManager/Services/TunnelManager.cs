@@ -422,6 +422,12 @@ public class TunnelManager : IDisposable
             var forward = new ForwardedPortRemote(
                 "127.0.0.1", (uint)config.RemotePort,
                 "127.0.0.1", (uint)config.LocalPort);
+            int requestCount = 0;
+            forward.RequestReceived += (_, e) =>
+            {
+                int seq = Interlocked.Increment(ref requestCount);
+                Log(name, $"转发请求 #{seq}：{e.OriginatorHost}:{e.OriginatorPort} → 本地 {config.LocalPort}");
+            };
             forward.Exception += (_, e) =>
             {
                 Log(name, $"端口转发异常：{ScrubHost(e.Exception.Message, config)}");
