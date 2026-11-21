@@ -95,8 +95,15 @@ public partial class InstallerWindow : Window
     {
         if (_lastResult is not null)
         {
-            if (_lastResult.Succeeded
-                && _options.Mode != InstallerMode.Uninstall
+            if (!_lastResult.Succeeded)
+            {
+                // 失败后支持直接重试安装
+                _lastResult = null;
+                await StartExecutionAsync();
+                return;
+            }
+
+            if (_options.Mode != InstallerMode.Uninstall
                 && !string.IsNullOrWhiteSpace(_lastResult.InstalledExecutablePath))
             {
                 InstallEngine.LaunchApplication(_lastResult.InstalledExecutablePath);
@@ -216,9 +223,11 @@ public partial class InstallerWindow : Window
             ResultBadgeIcon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#B91C1C"));
             ResultTitleText.Text = "操作失败";
             ResultMessageText.Text = result.Message;
-            PrimaryButton.Content = "关闭";
+            PrimaryButton.Content = "重试";
             PrimaryButton.Visibility = Visibility.Visible;
-            SecondaryButton.Visibility = Visibility.Collapsed;
+            SecondaryButton.Content = "关闭";
+            SecondaryButton.Visibility = Visibility.Visible;
+            SecondaryButton.IsEnabled = true;
         }
     }
 }
