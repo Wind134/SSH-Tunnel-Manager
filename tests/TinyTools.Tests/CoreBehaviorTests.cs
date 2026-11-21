@@ -5,6 +5,7 @@ using SSHTunnelManager.Converters;
 using SSHTunnelManager.Models;
 using SSHTunnelManager.Services;
 using TinyTools.Core.Processes;
+using TinyTools.Core.Updates;
 using TinyTools.Core.Windowing;
 
 namespace TinyTools.Tests;
@@ -100,16 +101,17 @@ public class CoreBehaviorTests
         Assert.True(settings.ShowTrayNotifications);
         Assert.Equal(0, settings.PortAutoRefreshSeconds);
         Assert.False(settings.ShowSystemProcesses);
-        Assert.Equal(1120, settings.WindowWidth);
-        Assert.Equal(720, settings.WindowHeight);
+        Assert.True(settings.CheckUpdatesOnStartup);
+        Assert.Equal(1080, settings.WindowWidth);
+        Assert.Equal(680, settings.WindowHeight);
     }
 
     [Theory]
-    [InlineData(1120, 700, 1400, 900, 1120, 700)]
-    [InlineData(400, 300, 1400, 900, 960, 620)]
+    [InlineData(1080, 680, 1400, 900, 1080, 680)]
+    [InlineData(400, 300, 1400, 900, 760, 520)]
     [InlineData(1800, 1200, 1400, 900, 1376, 876)]
-    [InlineData(double.NaN, double.PositiveInfinity, 1400, 900, 1120, 720)]
-    [InlineData(1120, 720, 900, 560, 876, 536)]
+    [InlineData(double.NaN, double.PositiveInfinity, 1400, 900, 1080, 680)]
+    [InlineData(1080, 680, 720, 480, 696, 456)]
     public void WindowSizePolicyClampsRememberedLogicalSize(
         double rememberedWidth,
         double rememberedHeight,
@@ -123,6 +125,27 @@ public class CoreBehaviorTests
 
         Assert.Equal(expectedWidth, size.Width);
         Assert.Equal(expectedHeight, size.Height);
+    }
+
+    [Fact]
+    public void UpdateInstallerLauncherBuildsUpgradeArguments()
+    {
+        var startInfo = UpdateInstallerLauncher.CreateUpgradeStartInfo(
+            @"C:\Temp\TinyTools-WinUI-v1.2.0-win-x64-Setup.exe",
+            4321,
+            @"C:\Users\Demo\AppData\Local\Programs\TinyTools");
+
+        Assert.True(startInfo.UseShellExecute);
+        Assert.Equal(
+            ["--upgrade", "--pid", "4321", "--target", @"C:\Users\Demo\AppData\Local\Programs\TinyTools"],
+            startInfo.ArgumentList);
+    }
+
+    [Fact]
+    public void UpdateInstallerLauncherRejectsNonExecutablePackage()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            UpdateInstallerLauncher.CreateUpgradeStartInfo(@"C:\Temp\TinyTools.zip", 100, @"C:\App"));
     }
 
     [Theory]

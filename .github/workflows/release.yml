@@ -86,30 +86,7 @@ jobs:
           Compress-Archive -Path wpf-fallback\* -DestinationPath $zipName
           Write-Host "Created $zipName"
 
-      - name: Install Inno Setup compiler
-        shell: pwsh
-        run: |
-          $url = "https://github.com/jrsoftware/issrc/releases/download/is-7_0_2/innosetup-7.0.2-x64.exe"
-          $expectedHash = "5ad54ca3def786f8f4212552e54cc6d8d61329e2d24a1cfee0571d42c2684ff1"
-          $installer = Join-Path $env:RUNNER_TEMP "innosetup-7.0.2-x64.exe"
-          $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup"
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          $actualHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actualHash -ne $expectedHash) {
-            throw "Inno Setup SHA-256 mismatch: $actualHash"
-          }
-          Start-Process -FilePath $installer -Wait -ArgumentList @(
-            "/VERYSILENT",
-            "/SUPPRESSMSGBOXES",
-            "/NORESTART",
-            "/SP-",
-            "/DIR=$installDir"
-          )
-          if (-not (Test-Path (Join-Path $installDir "ISCC.exe"))) {
-            throw "ISCC.exe was not installed."
-          }
-
-      - name: Build installer
+      - name: Build custom installer
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
@@ -117,10 +94,8 @@ jobs:
             -Version $version `
             -PublishDir "$PWD/winui-preview" `
             -OutputDir "$PWD/installer-output" `
-            -IsccPath "$env:RUNNER_TEMP/InnoSetup/ISCC.exe" `
             -ArtifactPrefix "TinyTools-WinUI" `
-            -AppExeName "TinyTools.WinUI.exe" `
-            -AppMutex "Local\TinyTools_WinUI_SingleInstance"
+            -AppExeName "TinyTools.WinUI.exe"
 
       - name: Checksum installer
         shell: pwsh

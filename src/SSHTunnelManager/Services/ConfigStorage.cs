@@ -8,11 +8,9 @@ namespace SSHTunnelManager.Services;
 
 public class ConfigStorage
 {
-    // Store next to the executable (not %APPDATA%) so the config survives UAC
-    // elevation (running as administrator redirects %APPDATA% to the admin profile).
-    // The WinUI single-file host extracts all bundled content before launch,
-    // which makes AppContext.BaseDirectory point into %TEMP%. The executable
-    // host configures this path at startup so data survives bundle updates.
+    private static readonly object s_fileLock = new();
+
+    // 紧邻可执行文件存放数据，兼容提权与单文件解压运行
     private static string s_appDir = Path.Combine(AppContext.BaseDirectory, "data");
 
     // Legacy location used before the admin-mode change; used only for one-time migration.
@@ -42,40 +40,43 @@ public class ConfigStorage
 
     public static ConfigFile Load()
     {
-        Directory.CreateDirectory(s_appDir);
-        MigrateIfNeeded();
-
-        if (File.Exists(ConfigPath))
+        lock (s_fileLock)
         {
-            try
-            {
-                var json = File.ReadAllText(ConfigPath);
-                var config = JsonSerializer.Deserialize<ConfigFile>(json, s_jsonOpts);
-                if (config != null)
-                    return config;
-            }
-            catch
-            {
-                // config.json is corrupted, try backup
-            }
-        }
+            Directory.CreateDirectory(s_appDir);
+            MigrateIfNeeded();
 
-        if (File.Exists(BackupPath))
-        {
-            try
+            if (File.Exists(ConfigPath))
             {
-                var json = File.ReadAllText(BackupPath);
-                var config = JsonSerializer.Deserialize<ConfigFile>(json, s_jsonOpts);
-                if (config != null)
-                    return config;
+                try
+                {
+                    var json = File.ReadAllText(ConfigPath);
+                    var config = JsonSerializer.Deserialize<ConfigFile>(json, s_jsonOpts);
+                    if (config != null)
+                        return config;
+                }
+                catch
+                {
+                    // 主配置损坏，尝试回退备份
+                }
             }
-            catch
-            {
-                // backup also corrupted
-            }
-        }
 
-        return new ConfigFile { Version = 2 };
+            if (File.Exists(BackupPath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(BackupPath);
+                    var config = JsonSerializer.Deserialize<ConfigFile>(json, s_jsonOpts);
+                    if (config != null)
+                        return config;
+                }
+                catch
+                {
+                    // 备份配置不可用
+                }
+            }
+
+            return new ConfigFile { Version = 2 };
+        }
     }
 
     // One-time move of an existing %APPDATA% config into the new portable location
@@ -101,31 +102,32 @@ public class ConfigStorage
 
     public static void Save(ConfigFile config)
     {
-        Directory.CreateDirectory(s_appDir);
-
-        // backup current file before overwriting
-        if (File.Exists(ConfigPath))
+        lock (s_fileLock)
         {
-            try { File.Copy(ConfigPath, BackupPath, overwrite: true); }
-            catch { /* non-critical */ }
+            Directory.CreateDirectory(s_appDir);
+
+            // 覆盖前备份当前配置
+            if (File.Exists(ConfigPath))
+            {
+                try { File.Copy(ConfigPath, BackupPath, overwrite: true); }
+                catch { }
+            }
+
+            // 写入临时文件再原子替换
+            var json = JsonSerializer.Serialize(config, s_jsonOpts);
+            File.WriteAllText(TemporaryPath, json);
+            File.Move(TemporaryPath, ConfigPath, overwrite: true);
         }
-
-        // atomic write: write to temp file, then rename
-        var json = JsonSerializer.Serialize(config, s_jsonOpts);
-        File.WriteAllText(TemporaryPath, json);
-
-        // File.Move with overwrite:true is a single atomic rename on Windows
-        // (the old delete-then-move sequence left a window where a crash could
-        // lose the config entirely; the .bak fallback covered it, but this is
-        // strictly safer).
-        File.Move(TemporaryPath, ConfigPath, overwrite: true);
     }
 
     public static void SaveSettings(AppSettings settings)
     {
-        var config = Load();
-        config.Settings = settings;
-        Save(config);
+        lock (s_fileLock)
+        {
+            var config = Load();
+            config.Settings = settings;
+            Save(config);
+        }
     }
 
     public static string GetConfigPath() => ConfigPath;

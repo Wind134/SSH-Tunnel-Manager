@@ -8,8 +8,7 @@ using Windows.Graphics;
 namespace TinyTools.WinUI.Services;
 
 /// <summary>
-/// Applies DPI-aware startup dimensions, keeps the restored window usable, and
-/// persists the last stable restored size without writing on every resize tick.
+/// 管理窗口初始位置、DPI 感知最小尺寸约束与防抖尺寸持久化。
 /// </summary>
 internal sealed class WindowPlacementManager : IDisposable
 {
@@ -20,7 +19,7 @@ internal sealed class WindowPlacementManager : IDisposable
     private readonly Action<AppSettings> _saveSettings;
     private readonly DispatcherTimer _saveTimer = new()
     {
-        Interval = TimeSpan.FromMilliseconds(600),
+        Interval = TimeSpan.FromMilliseconds(500),
     };
     private bool _initialized;
     private bool _disposed;
@@ -42,6 +41,7 @@ internal sealed class WindowPlacementManager : IDisposable
             return;
 
         _initialized = true;
+        ApplyMinimumSizeConstraints();
         ApplyInitialPlacement();
         _window.AppWindow.Changed += AppWindow_Changed;
     }
@@ -58,14 +58,39 @@ internal sealed class WindowPlacementManager : IDisposable
         _saveTimer.Tick -= SaveTimer_Tick;
     }
 
+    // 通过原生 OverlappedPresenter 设置最小尺寸，拖动缩放时无回弹闪烁
+    private void ApplyMinimumSizeConstraints()
+    {
+        if (_window.AppWindow.Presenter is not OverlappedPresenter presenter)
+            return;
+
+        presenter.IsResizable = true;
+        presenter.IsMaximizable = true;
+        presenter.IsMinimizable = true;
+
+        double scale = GetDpiScale();
+        DisplayArea? displayArea = DisplayArea.GetFromWindowId(
+            _window.AppWindow.Id, DisplayAreaFallback.Nearest);
+
+        LogicalWindowSize minLogical = displayArea is not null
+            ? WindowSizePolicy.GetEffectiveMinimumSize(
+                displayArea.WorkArea.Width / scale,
+                displayArea.WorkArea.Height / scale)
+            : new LogicalWindowSize(WindowSizePolicy.MinimumWidth, WindowSizePolicy.MinimumHeight);
+
+        presenter.PreferredMinimumWidth = ToPhysicalPixels(minLogical.Width, scale);
+        presenter.PreferredMinimumHeight = ToPhysicalPixels(minLogical.Height, scale);
+    }
+
     private void ApplyInitialPlacement()
     {
         double scale = GetDpiScale();
         DisplayArea? displayArea = DisplayArea.GetFromWindowId(
             _window.AppWindow.Id, DisplayAreaFallback.Nearest);
+
+        AppSettings settings = _getSettings();
         if (displayArea is null)
         {
-            var settings = _getSettings();
             LogicalWindowSize fallbackSize = WindowSizePolicy.Normalize(
                 settings.WindowWidth,
                 settings.WindowHeight,
@@ -78,12 +103,12 @@ internal sealed class WindowPlacementManager : IDisposable
         }
 
         RectInt32 workArea = displayArea.WorkArea;
-        var remembered = _getSettings();
         LogicalWindowSize logicalSize = WindowSizePolicy.Normalize(
-            remembered.WindowWidth,
-            remembered.WindowHeight,
+            settings.WindowWidth,
+            settings.WindowHeight,
             workArea.Width / scale,
             workArea.Height / scale);
+
         int width = Math.Min(workArea.Width, ToPhysicalPixels(logicalSize.Width, scale));
         int height = Math.Min(workArea.Height, ToPhysicalPixels(logicalSize.Height, scale));
         int x = workArea.X + Math.Max(0, (workArea.Width - width) / 2);
@@ -94,30 +119,12 @@ internal sealed class WindowPlacementManager : IDisposable
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
     {
+        // 跨显示器移动或 DPI 变化时刷新最小尺寸限制
+        if (args.DidPositionChange)
+            ApplyMinimumSizeConstraints();
+
         if (!args.DidSizeChange || !IsRestored(sender))
             return;
-
-        double scale = GetDpiScale();
-        DisplayArea? displayArea = DisplayArea.GetFromWindowId(
-            sender.Id, DisplayAreaFallback.Nearest);
-        int minimumWidth = ToPhysicalPixels(WindowSizePolicy.MinimumWidth, scale);
-        int minimumHeight = ToPhysicalPixels(WindowSizePolicy.MinimumHeight, scale);
-        if (displayArea is not null)
-        {
-            int margin = ToPhysicalPixels(WindowSizePolicy.WorkAreaMargin, scale);
-            minimumWidth = Math.Min(
-                minimumWidth, Math.Max(1, displayArea.WorkArea.Width - margin));
-            minimumHeight = Math.Min(
-                minimumHeight, Math.Max(1, displayArea.WorkArea.Height - margin));
-        }
-
-        if (sender.Size.Width < minimumWidth || sender.Size.Height < minimumHeight)
-        {
-            sender.Resize(new SizeInt32(
-                Math.Max(sender.Size.Width, minimumWidth),
-                Math.Max(sender.Size.Height, minimumHeight)));
-            return;
-        }
 
         _saveTimer.Stop();
         _saveTimer.Start();
@@ -155,8 +162,7 @@ internal sealed class WindowPlacementManager : IDisposable
         }
         catch
         {
-            // Window geometry persistence is best-effort and must never block
-            // startup, tray restore, or application shutdown.
+            // 窗口几何持久化失败不影响主流程
         }
     }
 

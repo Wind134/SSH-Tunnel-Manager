@@ -10,6 +10,7 @@ namespace TinyTools.WinUI.Pages;
 
 public sealed partial class TunnelsPage : Page
 {
+    private bool _logsCollapsed;
     private TunnelManager Manager => App.Services.TunnelManager;
 
     public TunnelsPage()
@@ -28,6 +29,7 @@ public sealed partial class TunnelsPage : Page
         foreach (var state in Manager.TunnelStates)
             state.PropertyChanged += OnTunnelPropertyChanged;
         UpdateSummary();
+        ApplyResponsiveLayout(ActualWidth);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -35,6 +37,38 @@ public sealed partial class TunnelsPage : Page
         Manager.TunnelStates.CollectionChanged -= OnCollectionChanged;
         foreach (var state in Manager.TunnelStates)
             state.PropertyChanged -= OnTunnelPropertyChanged;
+    }
+
+    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        => ApplyResponsiveLayout(e.NewSize.Width);
+
+    // 窄窗口自动缩小边距并将页头按钮折行
+    private void ApplyResponsiveLayout(double width)
+    {
+        bool narrow = width < 680;
+        LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
+        Grid.SetRow(HeaderActions, narrow ? 1 : 0);
+        Grid.SetColumn(HeaderActions, narrow ? 0 : 1);
+        HeaderActions.HorizontalAlignment = narrow ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+    }
+
+    private void ToggleLogs_Click(object sender, RoutedEventArgs e)
+    {
+        _logsCollapsed = !_logsCollapsed;
+        if (_logsCollapsed)
+        {
+            LogList.Visibility = Visibility.Collapsed;
+            LogRowDefinition.MinHeight = 0;
+            LogRowDefinition.Height = GridLength.Auto;
+            ToggleLogButton.Content = "展开";
+        }
+        else
+        {
+            LogList.Visibility = Visibility.Visible;
+            LogRowDefinition.MinHeight = 110;
+            LogRowDefinition.Height = new GridLength(0.38, GridUnitType.Star);
+            ToggleLogButton.Content = "收起";
+        }
     }
 
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -86,7 +120,7 @@ public sealed partial class TunnelsPage : Page
         if (await dialog.ShowAsync() != ContentDialogResult.Primary || dialog.ResultConfig is null)
             return;
 
-        Manager.UpdateTunnel(dialog.ResultConfig);
+        await Manager.UpdateTunnelAsync(dialog.ResultConfig);
         App.Services.SaveTunnels();
         ShowMessage("隧道配置已保存。", InfoBarSeverity.Success);
     }

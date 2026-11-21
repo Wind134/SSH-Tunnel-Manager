@@ -10,6 +10,8 @@ namespace TinyTools.WinUI.Pages;
 
 public sealed partial class PortsPage : Page
 {
+    private const double MinTableWidth = 860;
+
     private readonly ObservableCollection<PortOccupant> _visibleItems = new();
     private readonly DispatcherTimer _autoRefreshTimer = new();
     private List<PortOccupant> _allItems = [];
@@ -30,6 +32,8 @@ public sealed partial class PortsPage : Page
 
     private async void PortsPage_Loaded(object sender, RoutedEventArgs e)
     {
+        ApplyResponsiveLayout(ActualWidth);
+        UpdateTableWidth(TableScrollViewer.ActualWidth);
         ConfigureAutoRefresh();
         await RefreshAsync();
     }
@@ -38,6 +42,28 @@ public sealed partial class PortsPage : Page
     {
         _autoRefreshTimer.Stop();
         _refreshCancellation?.Cancel();
+    }
+
+    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        => ApplyResponsiveLayout(e.NewSize.Width);
+
+    private void TableScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        => UpdateTableWidth(e.NewSize.Width);
+
+    // 窄屏时缩小边距，并将搜索栏折到第二行
+    private void ApplyResponsiveLayout(double width)
+    {
+        bool narrow = width < 780;
+        LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
+        Grid.SetRow(SearchContainer, narrow ? 1 : 0);
+        Grid.SetColumn(SearchContainer, narrow ? 0 : 1);
+        Grid.SetColumnSpan(SearchContainer, narrow ? 2 : 1);
+    }
+
+    private void UpdateTableWidth(double viewportWidth)
+    {
+        if (viewportWidth > 0)
+            TableHost.Width = Math.Max(MinTableWidth, viewportWidth);
     }
 
     private async void AutoRefreshTimer_Tick(object? sender, object e)
@@ -77,7 +103,7 @@ public sealed partial class PortsPage : Page
         }
         catch (OperationCanceledException)
         {
-            // Navigating away cancels a pending refresh.
+            // 切换页面取消刷新
         }
         catch (Exception ex)
         {

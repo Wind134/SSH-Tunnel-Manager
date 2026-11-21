@@ -14,6 +14,8 @@ namespace TinyTools.WinUI.Pages;
 
 public sealed partial class FileLocksPage : Page
 {
+    private const double MinTableWidth = 720;
+
     private readonly ObservableCollection<FileLockEntry> _items = new();
     private CancellationTokenSource? _queryCancellation;
 
@@ -21,7 +23,35 @@ public sealed partial class FileLocksPage : Page
     {
         InitializeComponent();
         LockList.ItemsSource = _items;
+        Loaded += (_, _) =>
+        {
+            ApplyResponsiveLayout(ActualWidth);
+            UpdateTableWidth(TableScrollViewer.ActualWidth);
+        };
         Unloaded += (_, _) => CancelQuery();
+    }
+
+    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        => ApplyResponsiveLayout(e.NewSize.Width);
+
+    private void TableScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        => UpdateTableWidth(e.NewSize.Width);
+
+    // 窄屏时缩小边距并将按钮组折行
+    private void ApplyResponsiveLayout(double width)
+    {
+        bool narrow = width < 760;
+        LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
+        Grid.SetColumnSpan(PathBox, narrow ? 2 : 1);
+        Grid.SetRow(ActionButtons, narrow ? 1 : 0);
+        Grid.SetColumn(ActionButtons, narrow ? 0 : 1);
+        Grid.SetColumnSpan(ActionButtons, narrow ? 2 : 1);
+    }
+
+    private void UpdateTableWidth(double viewportWidth)
+    {
+        if (viewportWidth > 0)
+            TableHost.Width = Math.Max(MinTableWidth, viewportWidth);
     }
 
     private async void QueryButton_Click(object sender, RoutedEventArgs e)

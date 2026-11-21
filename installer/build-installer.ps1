@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
 
@@ -6,21 +6,18 @@ param(
     [string]$PublishDir,
 
     [string]$OutputDir = "",
-    [string]$IsccPath = "",
 
     [ValidatePattern('^[A-Za-z0-9.-]+$')]
-    [string]$ArtifactPrefix = "TinyTools",
+    [string]$ArtifactPrefix = "TinyTools-WinUI",
 
     [ValidatePattern('^[A-Za-z0-9._-]+\.exe$')]
-    [string]$AppExeName = "TinyTools.exe",
-
-    [string]$AppMutex = "Local\TinyTools_SingleInstance"
+    [string]$AppExeName = "TinyTools.WinUI.exe"
 )
 
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path $PSScriptRoot -Parent
-$scriptPath = Join-Path $PSScriptRoot "TinyTools.iss"
+$installerProject = Join-Path $repositoryRoot "src\TinyTools.Installer\TinyTools.Installer.csproj"
 $resolvedPublishDir = [System.IO.Path]::GetFullPath($PublishDir)
 $resolvedOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     Join-Path $repositoryRoot "artifacts\installer"
@@ -30,55 +27,52 @@ $resolvedOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) {
 
 $publishedExe = Join-Path $resolvedPublishDir $AppExeName
 if (-not (Test-Path $publishedExe)) {
-    throw "Published application executable not found: $publishedExe"
-}
-
-if ([string]::IsNullOrWhiteSpace($IsccPath)) {
-    $command = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
-    if ($command) {
-        $IsccPath = $command.Source
-    } else {
-        $candidates = @(
-            "C:\Program Files\Inno Setup 7\ISCC.exe",
-            "C:\Program Files (x86)\Inno Setup 7\ISCC.exe",
-            "C:\Program Files\Inno Setup 6\ISCC.exe",
-            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-        )
-        $IsccPath = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-    }
-}
-
-if ([string]::IsNullOrWhiteSpace($IsccPath) -or -not (Test-Path $IsccPath)) {
-    throw "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup 7 or pass -IsccPath."
+    throw "未找到发布的应用主程序：$publishedExe"
 }
 
 New-Item -ItemType Directory -Path $resolvedOutputDir -Force | Out-Null
 
-Write-Host "Building TinyTools installer..." -ForegroundColor Cyan
-Write-Host "Version: $Version"
-Write-Host "Compiler: $IsccPath"
-Write-Host "Published files: $resolvedPublishDir"
-Write-Host "Output: $resolvedOutputDir"
-Write-Host "Executable: $AppExeName"
+$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("TinyTools-Installer-Build-" + [Guid]::NewGuid().ToString("N"))
+$payloadZip = Join-Path $tempRoot "payload.zip"
+$installerPublishDir = Join-Path $tempRoot "publish"
+New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
 
-& $IsccPath `
-    "/DMyAppVersion=$Version" `
-    "/DPublishDir=$resolvedPublishDir" `
-    "/DMyArtifactPrefix=$ArtifactPrefix" `
-    "/DMyAppExeName=$AppExeName" `
-    "/DMyAppMutex=$AppMutex" `
-    "/O$resolvedOutputDir" `
-    $scriptPath
+try {
+    Write-Host "正在打包应用载荷 payload.zip..." -ForegroundColor Cyan
+    Compress-Archive -Path (Join-Path $resolvedPublishDir "*") -DestinationPath $payloadZip -CompressionLevel Optimal
 
-if ($LASTEXITCODE -ne 0) {
-    throw "Inno Setup compiler failed with exit code $LASTEXITCODE."
+    Write-Host "正在编译自研单文件安装程序..." -ForegroundColor Cyan
+    dotnet publish $installerProject `
+        -c Release `
+        -r win-x64 `
+        --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:EnableCompressionInSingleFile=true `
+        -p:DebugType=None `
+        -p:DebugSymbols=false `
+        -p:Version=$Version `
+        -p:PayloadZipPath=$payloadZip `
+        -o $installerPublishDir
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "安装程序发布失败，退出码：$LASTEXITCODE"
+    }
+
+    $builtExe = Join-Path $installerPublishDir "TinyTools.Installer.exe"
+    if (-not (Test-Path $builtExe)) {
+        throw "未生成安装程序文件：$builtExe"
+    }
+
+    $finalInstallerPath = Join-Path $resolvedOutputDir "$ArtifactPrefix-v$Version-win-x64-Setup.exe"
+    Copy-Item -Path $builtExe -Destination $finalInstallerPath -Force
+
+    $sizeMb = (Get-Item $finalInstallerPath).Length / 1MB
+    Write-Host "自定义安装程序已生成：$finalInstallerPath" -ForegroundColor Green
+    Write-Host ("体积：{0:N1} MB" -f $sizeMb)
 }
-
-$installerPath = Join-Path $resolvedOutputDir "$ArtifactPrefix-v$Version-win-x64-Setup.exe"
-if (-not (Test-Path $installerPath)) {
-    throw "Installer output was not found: $installerPath"
+finally {
+    if (Test-Path $tempRoot) {
+        Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
-
-$size = (Get-Item $installerPath).Length / 1MB
-Write-Host "Installer: $installerPath" -ForegroundColor Green
-Write-Host ("Size: {0:N1} MB" -f $size)

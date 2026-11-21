@@ -5,18 +5,23 @@ using SSHTunnelManager.Services;
 
 namespace TinyTools.WinUI.Services;
 
+/// <summary>
+/// 应用服务容器：集中管理隧道引擎、日志、配置与全局更新协调器。
+/// </summary>
 public sealed class AppServices : IDisposable
 {
     private readonly DispatcherQueue _dispatcherQueue;
     private bool _disposed;
 
     public TunnelManager TunnelManager { get; } = new();
+    public UpdateCoordinator UpdateCoordinator { get; }
     public ObservableCollection<string> LogEntries { get; } = new();
     public AppSettings Settings { get; private set; }
 
     public AppServices(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
+        UpdateCoordinator = new UpdateCoordinator(dispatcherQueue);
 
         ConfigFile config;
         try
@@ -86,6 +91,7 @@ public sealed class AppServices : IDisposable
         _disposed = true;
         TunnelManager.LogMessage -= OnLogMessage;
         TunnelManager.ConfigChanged -= OnConfigChanged;
+        UpdateCoordinator.Dispose();
         TunnelManager.Dispose();
     }
 }

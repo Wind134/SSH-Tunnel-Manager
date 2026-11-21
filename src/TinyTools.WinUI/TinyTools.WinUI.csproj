@@ -11,7 +11,7 @@
     <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>..\TinyTools\app.ico</ApplicationIcon>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -21,7 +21,7 @@
     <AssemblyTitle>TinyTools</AssemblyTitle>
     <Company>AI开发工具</Company>
     <Product>TinyTools</Product>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,7 +39,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\TinyTools\app.ico" Link="app.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\app.ico" Link="app.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\app-logo.png" Link="Assets\app-logo.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -11,10 +11,11 @@ public class AppSettings
     public string LastPage { get; set; } = "Tunnel";
     public int PortAutoRefreshSeconds { get; set; }
     public bool ShowSystemProcesses { get; set; }
-    // Stored as device-independent pixels so the window remains usable when
-    // Windows display scaling or the active monitor changes.
-    public double WindowWidth { get; set; } = 1120;
-    public double WindowHeight { get; set; } = 720;
+    // 启动后自动检查新版本
+    public bool CheckUpdatesOnStartup { get; set; } = true;
+    // 窗口逻辑尺寸（DIP），跨 DPI 和多显示器保持可用
+    public double WindowWidth { get; set; } = 1080;
+    public double WindowHeight { get; set; } = 680;
 }
 
 public class ConfigFile

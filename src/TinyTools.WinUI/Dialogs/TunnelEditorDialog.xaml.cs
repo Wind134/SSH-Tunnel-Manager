@@ -24,6 +24,13 @@ public sealed partial class TunnelEditorDialog : ContentDialog
         Populate(existing);
     }
 
+    // 按当前宿主窗口高度限制滚动区最大高度，避免小窗口裁切底部按钮
+    private void OnOpened(ContentDialog sender, ContentDialogOpenedEventArgs args)
+    {
+        double rootHeight = XamlRoot?.Size.Height ?? 680;
+        ContentScrollViewer.MaxHeight = Math.Clamp(rootHeight - 210, 240, 560);
+    }
+
     private void LoadSshConfig()
     {
         string configPath = Path.Combine(

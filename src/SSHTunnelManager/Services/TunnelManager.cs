@@ -149,33 +149,38 @@ public class TunnelManager : IDisposable
 
     public void UpdateTunnel(TunnelConfig config)
     {
-        if (_tunnels.TryGetValue(config.Id, out var state))
-        {
-            var wasConnected = state.Status == TunnelStatus.Connected;
+        _ = UpdateTunnelAsync(config);
+    }
 
-            _ = StopTunnel(state);
+    // 安全更新隧道：先停止旧连接，再更新配置并按需重连
+    public async Task UpdateTunnelAsync(TunnelConfig config)
+    {
+        if (!_tunnels.TryGetValue(config.Id, out var state))
+            return;
 
-            state.Config.Name = config.Name;
-            state.Config.LocalPort = config.LocalPort;
-            state.Config.RemotePort = config.RemotePort;
-            state.Config.SshUser = config.SshUser;
-            state.Config.SshPort = config.SshPort;
-            state.Config.AuthMethod = config.AuthMethod;
-            state.Config.EncryptedHost = config.EncryptedHost;
-            state.Config.EncryptedPassword = config.EncryptedPassword;
-            state.Config.KeyFilePath = config.KeyFilePath;
-            state.Config.HostKeyFingerprint = config.HostKeyFingerprint;
-            state.Config.HostKeyTrust = config.HostKeyTrust;
-            state.Config.AutoReconnect = config.AutoReconnect;
-            state.Config.ModifiedAt = DateTime.Now;
-            state.UpdateMaskedHost();
-            state.Status = TunnelStatus.Disconnected;
-            state.StatusMessage = string.Empty;
-            state.ConnectedSince = null;
+        bool wasConnected = state.Status == TunnelStatus.Connected;
+        await StopTunnel(state);
 
-            if (wasConnected)
-                _ = StartTunnel(state);
-        }
+        state.Config.Name = config.Name;
+        state.Config.LocalPort = config.LocalPort;
+        state.Config.RemotePort = config.RemotePort;
+        state.Config.SshUser = config.SshUser;
+        state.Config.SshPort = config.SshPort;
+        state.Config.AuthMethod = config.AuthMethod;
+        state.Config.EncryptedHost = config.EncryptedHost;
+        state.Config.EncryptedPassword = config.EncryptedPassword;
+        state.Config.KeyFilePath = config.KeyFilePath;
+        state.Config.HostKeyFingerprint = config.HostKeyFingerprint;
+        state.Config.HostKeyTrust = config.HostKeyTrust;
+        state.Config.AutoReconnect = config.AutoReconnect;
+        state.Config.ModifiedAt = DateTime.Now;
+        state.UpdateMaskedHost();
+        state.Status = TunnelStatus.Disconnected;
+        state.StatusMessage = string.Empty;
+        state.ConnectedSince = null;
+
+        if (wasConnected)
+            await StartTunnel(state);
     }
 
     public async Task StartTunnel(TunnelState state)
