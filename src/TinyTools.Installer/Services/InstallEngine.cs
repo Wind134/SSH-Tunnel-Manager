@@ -40,11 +40,10 @@ public sealed class InstallEngine
             if (string.IsNullOrWhiteSpace(request.InstallDirectory))
                 return new InstallExecutionResult(false, "安装目录不能为空。");
 
-            progress?.Report(new InstallProgressInfo(8, "正在检查并等待正在运行的 TinyTools 退出…"));
-            await ProcessWaitService.WaitForExitAsync(
+            progress?.Report(new InstallProgressInfo(8, "正在关闭正在运行的 TinyTools 进程…"));
+            await ProcessWaitService.EnsureStoppedAsync(
                 request.WaitProcessId,
-                AppProcessName,
-                TimeSpan.FromSeconds(10),
+                [AppProcessName, "TinyTools"],
                 cancellationToken);
 
             progress?.Report(new InstallProgressInfo(15, "正在解压应用文件…"));
@@ -125,11 +124,10 @@ public sealed class InstallEngine
     {
         try
         {
-            progress?.Report(new InstallProgressInfo(15, "正在等待 TinyTools 退出…"));
-            await ProcessWaitService.WaitForExitAsync(
+            progress?.Report(new InstallProgressInfo(15, "正在关闭正在运行的 TinyTools 进程…"));
+            await ProcessWaitService.EnsureStoppedAsync(
                 request.WaitProcessId,
-                AppProcessName,
-                TimeSpan.FromSeconds(10),
+                [AppProcessName, "TinyTools"],
                 cancellationToken);
 
             progress?.Report(new InstallProgressInfo(40, "正在清理快捷方式与卸载登记…"));

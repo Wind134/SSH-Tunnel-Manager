@@ -8,7 +8,7 @@
     <AssemblyTitle>TinyTools Core</AssemblyTitle>
     <Company>AI开发工具</Company>
     <Product>TinyTools</Product>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

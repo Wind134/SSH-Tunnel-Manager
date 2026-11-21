@@ -5,7 +5,7 @@ using System.Reflection;
 namespace TinyTools.Installer.Services;
 
 /// <summary>
-/// 从安装程序内嵌资源中提取应用文件，自动防止路径穿越并保留用户 data 目录。
+/// 从安装程序内嵌资源中提取应用文件，自动防止路径穿越、保留 data 目录并对短暂文件锁做重试。
 /// </summary>
 public static class PayloadExtractor
 {
@@ -51,17 +51,37 @@ public static class PayloadExtractor
             if (!string.IsNullOrWhiteSpace(parentDir))
                 Directory.CreateDirectory(parentDir);
 
-            await using Stream source = entry.Open();
-            await using var destination = new FileStream(
-                destinationPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                81920,
-                useAsync: true);
-            await source.CopyToAsync(destination, cancellationToken);
-
+            await ExtractEntryWithRetryAsync(entry, destinationPath, cancellationToken);
             progress?.Report(((double)(i + 1) / total, entry.Name));
+        }
+    }
+
+    // 进程刚退出时系统释放句柄存在短暂延迟，对 IOException 做退避重试
+    private static async Task ExtractEntryWithRetryAsync(
+        ZipArchiveEntry entry,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 8;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await using Stream source = entry.Open();
+                await using var destination = new FileStream(
+                    destinationPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    81920,
+                    useAsync: true);
+                await source.CopyToAsync(destination, cancellationToken);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(300 * attempt, cancellationToken);
+            }
         }
     }
 }
