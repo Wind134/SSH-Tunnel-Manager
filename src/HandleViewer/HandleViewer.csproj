@@ -8,7 +8,7 @@
     <AssemblyTitle>Handle Viewer</AssemblyTitle>
     <Company>AI开发工具</Company>
     <Product>Handle Viewer</Product>
-    <Version>1.2.2</Version>
+    <Version>1.2.3</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>

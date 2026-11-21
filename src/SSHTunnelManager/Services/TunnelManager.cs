@@ -311,7 +311,9 @@ public class TunnelManager : IDisposable
 
             var connInfo = new ConnectionInfo(host, config.SshPort, config.SshUser, authMethods)
             {
-                Timeout = TimeSpan.FromSeconds(20)
+                Timeout = TimeSpan.FromSeconds(30),
+                ChannelCloseTimeout = TimeSpan.FromSeconds(5),
+                MaxSessions = 64,
             };
 
             state.Client = new SshClient(connInfo)
@@ -422,6 +424,12 @@ public class TunnelManager : IDisposable
             var forward = new ForwardedPortRemote(
                 "127.0.0.1", (uint)config.RemotePort,
                 "127.0.0.1", (uint)config.LocalPort);
+            int requestCount = 0;
+            forward.RequestReceived += (_, e) =>
+            {
+                int seq = Interlocked.Increment(ref requestCount);
+                Log(name, $"转发请求 #{seq}：{e.OriginatorHost}:{e.OriginatorPort} → 本地 {config.LocalPort}");
+            };
             forward.Exception += (_, e) =>
             {
                 Log(name, $"端口转发异常：{ScrubHost(e.Exception.Message, config)}");
@@ -432,9 +440,6 @@ public class TunnelManager : IDisposable
             state.ForwardedPort = forward;
 
             Log(name, $"端口转发已启动：远程 {config.RemotePort} → 本地 {config.LocalPort}");
-
-            // connectivity test via SSH command
-            _ = Task.Run(() => TestConnectivityAsync(state));
 
             state.Status = TunnelStatus.Connected;
             state.ConnectedSince = DateTime.Now;
@@ -508,35 +513,6 @@ public class TunnelManager : IDisposable
                 "The private key could not be parsed. Verify that the key format and " +
                 "passphrase are valid, then select the key again.\n\n" +
                 $"Details: {ex.Message}", ex);
-        }
-    }
-
-    private async Task TestConnectivityAsync(TunnelState state)
-    {
-        var config = state.Config;
-        var name = config.Name;
-
-        try
-        {
-            await Task.Delay(2000); // give the tunnel a moment
-
-            if (state.Client?.IsConnected != true)
-                return;
-
-            using var cmd = state.Client.RunCommand(
-                $"curl -x http://127.0.0.1:{config.RemotePort} " +
-                $"-s -o /dev/null -w '%{{http_code}}' " +
-                $"--connect-timeout 5 https://www.google.com");
-
-            var result = cmd.Result.Trim();
-            if (result == "200" || result == "301" || result == "302")
-                Log(name, "连通性测试通过");
-            else
-                Log(name, $"连通性测试返回 HTTP {result}（隧道可能受限）");
-        }
-        catch (Exception ex)
-        {
-            Log(name, $"连通性测试失败：{ex.Message}");
         }
     }
 
