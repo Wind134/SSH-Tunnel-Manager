@@ -9,20 +9,21 @@ namespace TinyTools.WinUI.Pages;
 
 public sealed partial class SettingsPage : Page
 {
+    private bool _isPopulating;
     private UpdateCoordinator Updater => App.Services.UpdateCoordinator;
 
     public SettingsPage()
     {
         InitializeComponent();
         Populate(App.Services.Settings);
-        CurrentVersionText.Text = $"当前版本：v{UpdateCoordinator.GetCurrentVersion()}";
+        CurrentVersionText.Text = $"版本 v{UpdateCoordinator.GetCurrentVersion()} · Windows 原生工具箱";
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        ApplyResponsiveLayout(ActualWidth);
+        ApplyResponsivePadding(ActualWidth);
         Updater.StateChanged += OnUpdateStateChanged;
         RenderUpdateState(Updater.CurrentState);
     }
@@ -33,48 +34,62 @@ public sealed partial class SettingsPage : Page
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
-        => ApplyResponsiveLayout(e.NewSize.Width);
+        => ApplyResponsivePadding(e.NewSize.Width);
 
-    // 窄屏时缩小边距并将双列选项切换为单列堆叠
-    private void ApplyResponsiveLayout(double width)
+    private void ApplyResponsivePadding(double width)
     {
-        bool narrow = width < 600;
-        LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
-        Grid.SetColumnSpan(ThemeBox, narrow ? 2 : 1);
-        Grid.SetRow(StartPageBox, narrow ? 1 : 0);
-        Grid.SetColumn(StartPageBox, narrow ? 0 : 1);
-        Grid.SetColumnSpan(StartPageBox, narrow ? 2 : 1);
+        PageRoot.Padding = width < 680
+            ? new Thickness(16, 16, 16, 0)
+            : new Thickness(36, 24, 36, 0);
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    // 控件变更即自动保存并即时应用，符合 WinUI 3 设置页规范
+    private void SettingControl_Changed(object sender, object e)
+    {
+        if (_isPopulating)
+            return;
+
+        PersistSettings();
+    }
+
+    private void PersistSettings()
     {
         var settings = new AppSettings
         {
-            AutoStartMinimized = AutoStartMinimizedBox.IsChecked == true,
-            MinimizeToTrayOnClose = MinimizeToTrayBox.IsChecked == true,
-            ConfirmBeforeExit = ConfirmBeforeExitBox.IsChecked == true,
-            ShowTrayNotifications = ShowTrayNotificationsBox.IsChecked == true,
+            AutoStartMinimized = AutoStartMinimizedSwitch.IsOn,
+            MinimizeToTrayOnClose = MinimizeToTraySwitch.IsOn,
+            ConfirmBeforeExit = ConfirmBeforeExitSwitch.IsOn,
+            ShowTrayNotifications = ShowTrayNotificationsSwitch.IsOn,
             Theme = SelectedTag(ThemeBox, "System"),
             StartPage = SelectedTag(StartPageBox, "LastUsed"),
             LastPage = App.Services.Settings.LastPage,
             PortAutoRefreshSeconds = int.TryParse(SelectedTag(PortRefreshBox, "0"), out int seconds)
                 ? seconds
                 : 0,
-            ShowSystemProcesses = ShowSystemProcessesBox.IsChecked == true,
-            CheckUpdatesOnStartup = CheckUpdatesOnStartupBox.IsChecked == true,
+            ShowSystemProcesses = ShowSystemProcessesSwitch.IsOn,
+            CheckUpdatesOnStartup = CheckUpdatesOnStartupSwitch.IsOn,
             WindowWidth = App.Services.Settings.WindowWidth,
             WindowHeight = App.Services.Settings.WindowHeight,
         };
 
         App.Services.SaveSettings(settings);
         ApplyTheme(settings.Theme);
-        SavedBar.Severity = InfoBarSeverity.Success;
-        SavedBar.Message = "设置已保存。";
-        SavedBar.IsOpen = true;
     }
 
     private void Reset_Click(object sender, RoutedEventArgs e)
-        => Populate(new AppSettings { LastPage = App.Services.Settings.LastPage });
+    {
+        var defaults = new AppSettings
+        {
+            LastPage = App.Services.Settings.LastPage,
+            WindowWidth = App.Services.Settings.WindowWidth,
+            WindowHeight = App.Services.Settings.WindowHeight,
+        };
+        Populate(defaults);
+        PersistSettings();
+        StatusInfoBar.Severity = InfoBarSeverity.Success;
+        StatusInfoBar.Message = "已恢复默认设置。";
+        StatusInfoBar.IsOpen = true;
+    }
 
     private void OpenDataDirectory_Click(object sender, RoutedEventArgs e)
     {
@@ -88,9 +103,9 @@ public sealed partial class SettingsPage : Page
         }
         catch (Exception ex)
         {
-            SavedBar.Severity = InfoBarSeverity.Error;
-            SavedBar.Message = $"无法打开数据目录：{ex.Message}";
-            SavedBar.IsOpen = true;
+            StatusInfoBar.Severity = InfoBarSeverity.Error;
+            StatusInfoBar.Message = $"无法打开数据目录：{ex.Message}";
+            StatusInfoBar.IsOpen = true;
         }
     }
 
@@ -210,15 +225,23 @@ public sealed partial class SettingsPage : Page
 
     private void Populate(AppSettings settings)
     {
-        AutoStartMinimizedBox.IsChecked = settings.AutoStartMinimized;
-        MinimizeToTrayBox.IsChecked = settings.MinimizeToTrayOnClose;
-        ConfirmBeforeExitBox.IsChecked = settings.ConfirmBeforeExit;
-        ShowTrayNotificationsBox.IsChecked = settings.ShowTrayNotifications;
-        ShowSystemProcessesBox.IsChecked = settings.ShowSystemProcesses;
-        CheckUpdatesOnStartupBox.IsChecked = settings.CheckUpdatesOnStartup;
-        SelectTag(ThemeBox, settings.Theme, "System");
-        SelectTag(StartPageBox, settings.StartPage, "LastUsed");
-        SelectTag(PortRefreshBox, settings.PortAutoRefreshSeconds.ToString(), "0");
+        _isPopulating = true;
+        try
+        {
+            AutoStartMinimizedSwitch.IsOn = settings.AutoStartMinimized;
+            MinimizeToTraySwitch.IsOn = settings.MinimizeToTrayOnClose;
+            ConfirmBeforeExitSwitch.IsOn = settings.ConfirmBeforeExit;
+            ShowTrayNotificationsSwitch.IsOn = settings.ShowTrayNotifications;
+            ShowSystemProcessesSwitch.IsOn = settings.ShowSystemProcesses;
+            CheckUpdatesOnStartupSwitch.IsOn = settings.CheckUpdatesOnStartup;
+            SelectTag(ThemeBox, settings.Theme, "System");
+            SelectTag(StartPageBox, settings.StartPage, "LastUsed");
+            SelectTag(PortRefreshBox, settings.PortAutoRefreshSeconds.ToString(), "0");
+        }
+        finally
+        {
+            _isPopulating = false;
+        }
     }
 
     private static void ApplyTheme(string theme)
