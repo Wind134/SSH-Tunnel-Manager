@@ -75,9 +75,12 @@ public class TunnelState : INotifyPropertyChanged
     internal int ReconnectAttempts { get; set; }
     internal CancellationTokenSource? ReconnectCts { get; set; }
 
-    public TunnelState(TunnelConfig config)
+    private readonly Action<Action>? _propertyChangedDispatcher;
+
+    public TunnelState(TunnelConfig config, Action<Action>? propertyChangedDispatcher = null)
     {
         Config = config;
+        _propertyChangedDispatcher = propertyChangedDispatcher;
         UpdateMaskedHost();
     }
 
@@ -94,21 +97,35 @@ public class TunnelState : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(MaskedHost));
-        // Bindings such as Config.Name and Config.LocalPort need the parent
-        // notification because TunnelConfig intentionally remains UI-neutral.
+        // 通知父属性刷新 Config.* 子绑定
         OnPropertyChanged(nameof(Config));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    {
+        var handler = PropertyChanged;
+        if (handler is null)
+            return;
+
+        if (_propertyChangedDispatcher is not null)
+            _propertyChangedDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
+        else
+            handler(this, new PropertyChangedEventArgs(name));
+    }
 }
 
 public class TunnelManager : IDisposable
 {
     private readonly Dictionary<Guid, TunnelState> _tunnels = new();
+    private readonly Action<Action>? _uiDispatcher;
     private System.Threading.Timer? _heartbeatTimer;
     private bool _disposed;
+
+    public TunnelManager(Action<Action>? uiDispatcher = null)
+    {
+        _uiDispatcher = uiDispatcher;
+    }
 
     public ObservableCollection<TunnelState> TunnelStates { get; } = new();
 
@@ -122,7 +139,7 @@ public class TunnelManager : IDisposable
 
         foreach (var config in configs)
         {
-            var state = new TunnelState(config);
+            var state = new TunnelState(config, _uiDispatcher);
             _tunnels[config.Id] = state;
             TunnelStates.Add(state);
         }
@@ -132,7 +149,7 @@ public class TunnelManager : IDisposable
 
     public void AddTunnel(TunnelConfig config)
     {
-        var state = new TunnelState(config);
+        var state = new TunnelState(config, _uiDispatcher);
         _tunnels[config.Id] = state;
         TunnelStates.Add(state);
     }
@@ -261,23 +278,50 @@ public class TunnelManager : IDisposable
             if (!PortChecker.IsPortInUse(config.LocalPort))
                 Log(name, $"警告：本地端口 {config.LocalPort} 未监听，隧道目标可能不可用。");
 
-            AuthenticationMethod auth = config.AuthMethod switch
+            AuthenticationMethod[] authMethods;
+            if (config.AuthMethod == AuthMethod.Password)
             {
-                AuthMethod.Password => new PasswordAuthenticationMethod(
-                    config.SshUser,
-                    CryptoHelper.Decrypt(config.EncryptedPassword)),
-                AuthMethod.PrivateKey => new PrivateKeyAuthenticationMethod(
-                    config.SshUser,
-                    LoadPrivateKey(config.KeyFilePath, name)),
-                _ => throw new InvalidOperationException("Unknown auth method")
+                string password = CryptoHelper.Decrypt(config.EncryptedPassword);
+                var kbInteractive = new KeyboardInteractiveAuthenticationMethod(config.SshUser);
+                kbInteractive.AuthenticationPrompt += (_, e) =>
+                {
+                    foreach (var prompt in e.Prompts)
+                        prompt.Response = password;
+                };
+                // 同时启用 password 与 keyboard-interactive，兼容 PAM 服务器
+                authMethods =
+                [
+                    new PasswordAuthenticationMethod(config.SshUser, password),
+                    kbInteractive,
+                ];
+            }
+            else if (config.AuthMethod == AuthMethod.PrivateKey)
+            {
+                authMethods =
+                [
+                    new PrivateKeyAuthenticationMethod(
+                        config.SshUser,
+                        LoadPrivateKey(config.KeyFilePath, name)),
+                ];
+            }
+            else
+            {
+                throw new InvalidOperationException("未知的认证方式");
+            }
+
+            var connInfo = new ConnectionInfo(host, config.SshPort, config.SshUser, authMethods)
+            {
+                Timeout = TimeSpan.FromSeconds(20)
             };
 
-            var connInfo = new ConnectionInfo(host, config.SshPort, config.SshUser, auth)
+            state.Client = new SshClient(connInfo)
             {
-                Timeout = TimeSpan.FromSeconds(10)
+                KeepAliveInterval = TimeSpan.FromSeconds(30)
             };
-
-            state.Client = new SshClient(connInfo);
+            state.Client.ErrorOccurred += (_, e) =>
+            {
+                Log(name, $"SSH 连接异常：{ScrubHost(e.Exception.Message, config)}");
+            };
 
             state.Client.HostKeyReceived += (sender, e) =>
             {
@@ -378,9 +422,13 @@ public class TunnelManager : IDisposable
             var forward = new ForwardedPortRemote(
                 "127.0.0.1", (uint)config.RemotePort,
                 "127.0.0.1", (uint)config.LocalPort);
+            forward.Exception += (_, e) =>
+            {
+                Log(name, $"端口转发异常：{ScrubHost(e.Exception.Message, config)}");
+            };
 
             state.Client.AddForwardedPort(forward);
-            forward.Start();
+            await Task.Run(() => forward.Start(), ct);
             state.ForwardedPort = forward;
 
             Log(name, $"端口转发已启动：远程 {config.RemotePort} → 本地 {config.LocalPort}");

@@ -66,6 +66,8 @@ public sealed partial class MainWindow : Window
             _ => typeof(TunnelsPage),
         });
 
+        _ = App.Services.UpdateCoordinator.CleanupObsoleteInstallersAsync();
+
         if (App.Services.Settings.CheckUpdatesOnStartup)
             _ = App.Services.UpdateCoordinator.CheckSilentlyOnStartupAsync();
     }

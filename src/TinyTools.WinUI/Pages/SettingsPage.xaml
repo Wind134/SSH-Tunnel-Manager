@@ -4,129 +4,316 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     SizeChanged="Page_SizeChanged">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel
-            x:Name="LayoutRoot"
-            Padding="24,20"
-            Spacing="20"
-            MaxWidth="820"
-            HorizontalAlignment="Stretch">
-            <TextBlock Text="设置" Style="{StaticResource TitleTextBlockStyle}" />
-            <InfoBar x:Name="SavedBar" IsOpen="False" IsClosable="True" Severity="Success" Message="设置已保存。" />
+    <Page.Resources>
+        <!-- WinUI 3 规范设置卡片容器样式 -->
+        <Style x:Key="SettingsCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,14" />
+        </Style>
 
-            <TextBlock Text="外观与启动" Style="{StaticResource SubtitleTextBlockStyle}" />
-            <Grid x:Name="AppearanceGrid" ColumnSpacing="16" RowSpacing="12">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <Style x:Key="SettingsGroupHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+            <Setter Property="Margin" Value="0,20,0,8" />
+        </Style>
+
+        <Style x:Key="CardDescriptionStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Page.Resources>
+
+    <Grid x:Name="PageRoot" Padding="36,24,36,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 固定顶部页头，严格左对齐 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12" Spacing="4">
+            <TextBlock Text="设置" Style="{StaticResource TitleTextBlockStyle}" />
+            <InfoBar x:Name="StatusInfoBar" IsOpen="False" IsClosable="True" Severity="Success" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,0,28">
+            <!-- 左对齐自适应列：宽屏最大 960px 且紧贴左侧，窄屏自动铺满 -->
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" MaxWidth="960" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <ComboBox x:Name="ThemeBox" Grid.Row="0" Grid.Column="0" Header="应用主题" HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="跟随系统" Tag="System" />
-                    <ComboBoxItem Content="浅色" Tag="Light" />
-                    <ComboBoxItem Content="深色" Tag="Dark" />
-                </ComboBox>
-                <ComboBox x:Name="StartPageBox" Grid.Row="0" Grid.Column="1" Header="启动页面" HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="上次使用" Tag="LastUsed" />
-                    <ComboBoxItem Content="SSH 隧道" Tag="Tunnel" />
-                    <ComboBoxItem Content="端口与进程" Tag="HandleViewer" />
-                    <ComboBoxItem Content="文件和文件夹占用" Tag="FileLocks" />
-                </ComboBox>
-            </Grid>
-            <CheckBox x:Name="AutoStartMinimizedBox" Content="启动后直接最小化到托盘" />
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <!-- 外观与启动 -->
+                    <TextBlock Text="外观与启动" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,4,0,8" />
 
-            <TextBlock Text="窗口与托盘" Style="{StaticResource SubtitleTextBlockStyle}" />
-            <StackPanel Spacing="6">
-                <CheckBox x:Name="MinimizeToTrayBox" Content="关闭窗口时最小化到托盘" />
-                <CheckBox x:Name="ConfirmBeforeExitBox" Content="退出前询问确认" />
-                <CheckBox x:Name="ShowTrayNotificationsBox" Content="显示托盘气泡通知" />
-            </StackPanel>
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE790;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="应用主题" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="选择浅色、深色或跟随 Windows 系统外观" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ComboBox x:Name="ThemeBox" Grid.Column="2" MinWidth="156" VerticalAlignment="Center" SelectionChanged="SettingControl_Changed">
+                                <ComboBoxItem Content="跟随系统" Tag="System" />
+                                <ComboBoxItem Content="浅色" Tag="Light" />
+                                <ComboBoxItem Content="深色" Tag="Dark" />
+                            </ComboBox>
+                        </Grid>
+                    </Border>
 
-            <TextBlock Text="端口查看器" Style="{StaticResource SubtitleTextBlockStyle}" />
-            <ComboBox x:Name="PortRefreshBox" Header="自动刷新" MaxWidth="320" HorizontalAlignment="Stretch">
-                <ComboBoxItem Content="关闭" Tag="0" />
-                <ComboBoxItem Content="每 5 秒" Tag="5" />
-                <ComboBoxItem Content="每 10 秒" Tag="10" />
-                <ComboBoxItem Content="每 30 秒" Tag="30" />
-            </ComboBox>
-            <CheckBox x:Name="ShowSystemProcessesBox" Content="显示系统进程" />
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE80F;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="启动页面" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="打开 TinyTools 时默认展示的功能页" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ComboBox x:Name="StartPageBox" Grid.Column="2" MinWidth="156" VerticalAlignment="Center" SelectionChanged="SettingControl_Changed">
+                                <ComboBoxItem Content="上次使用" Tag="LastUsed" />
+                                <ComboBoxItem Content="SSH 隧道" Tag="Tunnel" />
+                                <ComboBoxItem Content="端口与进程" Tag="HandleViewer" />
+                                <ComboBoxItem Content="文件占用" Tag="FileLocks" />
+                            </ComboBox>
+                        </Grid>
+                    </Border>
 
-            <TextBlock Text="关于与更新" Style="{StaticResource SubtitleTextBlockStyle}" />
-            <Border
-                Padding="16"
-                CornerRadius="8"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1">
-                <StackPanel Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                        <Image Source="ms-appx:///Assets/app-logo.png" Width="36" Height="36" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="TinyTools" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                            <TextBlock x:Name="CurrentVersionText" Opacity="0.72" />
-                        </StackPanel>
-                    </StackPanel>
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE7E8;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="启动后最小化到托盘" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="程序启动后不弹出主窗口，直接在系统托盘后台运行" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="AutoStartMinimizedSwitch" Grid.Column="2" OnContent="开" OffContent="关" MinWidth="0" VerticalAlignment="Center" Toggled="SettingControl_Changed" />
+                        </Grid>
+                    </Border>
 
-                    <CheckBox x:Name="CheckUpdatesOnStartupBox" Content="启动时自动检查新版本" />
+                    <!-- 窗口与托盘 -->
+                    <TextBlock Text="窗口与托盘" Style="{StaticResource SettingsGroupHeaderStyle}" />
 
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="CheckUpdateButton" Content="检查更新" Click="CheckUpdate_Click" />
-                        <Button
-                            x:Name="DownloadUpdateButton"
-                            Content="下载安装包"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Visibility="Collapsed"
-                            Click="DownloadUpdate_Click" />
-                        <Button
-                            x:Name="InstallUpdateButton"
-                            Content="立即安装更新"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Visibility="Collapsed"
-                            Click="InstallUpdate_Click" />
-                        <Button
-                            x:Name="CancelUpdateButton"
-                            Content="取消"
-                            Visibility="Collapsed"
-                            Click="CancelUpdate_Click" />
-                        <Button
-                            x:Name="OpenReleasePageButton"
-                            Content="查看发布页"
-                            Visibility="Collapsed"
-                            Click="OpenReleasePage_Click" />
-                    </StackPanel>
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE8A7;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="关闭窗口时最小化到托盘" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="点击右上角关闭按钮时隐藏至托盘，保持 SSH 隧道不断开" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="MinimizeToTraySwitch" Grid.Column="2" OnContent="开" OffContent="关" MinWidth="0" VerticalAlignment="Center" Toggled="SettingControl_Changed" />
+                        </Grid>
+                    </Border>
 
-                    <ProgressBar
-                        x:Name="UpdateProgress"
-                        HorizontalAlignment="Stretch"
-                        Minimum="0"
-                        Maximum="100"
-                        Visibility="Collapsed" />
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE7BA;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="退出前询问确认" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="彻底退出程序前弹窗确认，防止误关运行中的隧道" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ConfirmBeforeExitSwitch" Grid.Column="2" OnContent="开" OffContent="关" MinWidth="0" VerticalAlignment="Center" Toggled="SettingControl_Changed" />
+                        </Grid>
+                    </Border>
 
-                    <InfoBar x:Name="UpdateBar" IsOpen="False" IsClosable="True" />
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xEA8F;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="显示托盘气泡通知" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="最小化到托盘时在系统通知区域给出提示" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ShowTrayNotificationsSwitch" Grid.Column="2" OnContent="开" OffContent="关" MinWidth="0" VerticalAlignment="Center" Toggled="SettingControl_Changed" />
+                        </Grid>
+                    </Border>
 
-                    <Border
-                        x:Name="ReleaseNotesContainer"
-                        Padding="12"
-                        CornerRadius="6"
-                        Visibility="Collapsed"
-                        Background="{ThemeResource LayerFillColorDefaultBrush}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="更新说明" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
-                            <TextBlock x:Name="ReleaseNotesText" TextWrapping="Wrap" MaxLines="8" TextTrimming="CharacterEllipsis" />
+                    <!-- 端口查看器 -->
+                    <TextBlock Text="端口与进程" Style="{StaticResource SettingsGroupHeaderStyle}" />
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE72C;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="自动刷新间隔" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="定时更新端口监听与连接状态列表" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ComboBox x:Name="PortRefreshBox" Grid.Column="2" MinWidth="156" VerticalAlignment="Center" SelectionChanged="SettingControl_Changed">
+                                <ComboBoxItem Content="关闭" Tag="0" />
+                                <ComboBoxItem Content="每 5 秒" Tag="5" />
+                                <ComboBoxItem Content="每 10 秒" Tag="10" />
+                                <ComboBoxItem Content="每 30 秒" Tag="30" />
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE950;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="默认显示系统进程" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="在端口列表中包含 PID 0 与 PID 4 等系统内核记录" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ShowSystemProcessesSwitch" Grid.Column="2" OnContent="开" OffContent="关" MinWidth="0" VerticalAlignment="Center" Toggled="SettingControl_Changed" />
+                        </Grid>
+                    </Border>
+
+                    <!-- 关于与更新 -->
+                    <TextBlock Text="关于与更新" Style="{StaticResource SettingsGroupHeaderStyle}" />
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Image Source="ms-appx:///Assets/app-logo.png" Width="36" Height="36" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="TinyTools" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <TextBlock x:Name="CurrentVersionText" Style="{StaticResource CardDescriptionStyle}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button x:Name="CheckUpdateButton" Content="检查更新" Click="CheckUpdate_Click" />
+                                    <Button
+                                        x:Name="DownloadUpdateButton"
+                                        Content="下载安装包"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Visibility="Collapsed"
+                                        Click="DownloadUpdate_Click" />
+                                    <Button
+                                        x:Name="InstallUpdateButton"
+                                        Content="立即安装更新"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Visibility="Collapsed"
+                                        Click="InstallUpdate_Click" />
+                                    <Button
+                                        x:Name="CancelUpdateButton"
+                                        Content="取消"
+                                        Visibility="Collapsed"
+                                        Click="CancelUpdate_Click" />
+                                    <Button
+                                        x:Name="OpenReleasePageButton"
+                                        Content="发布页"
+                                        Visibility="Collapsed"
+                                        Click="OpenReleasePage_Click" />
+                                </StackPanel>
+                            </Grid>
+
+                            <ProgressBar
+                                x:Name="UpdateProgress"
+                                HorizontalAlignment="Stretch"
+                                Minimum="0"
+                                Maximum="100"
+                                Visibility="Collapsed" />
+
+                            <InfoBar x:Name="UpdateBar" IsOpen="False" IsClosable="True" />
+
+                            <Border
+                                x:Name="ReleaseNotesContainer"
+                                Padding="12"
+                                CornerRadius="6"
+                                Visibility="Collapsed"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="更新说明" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock x:Name="ReleaseNotesText" TextWrapping="Wrap" MaxLines="8" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
-                </StackPanel>
-            </Border>
 
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="保存设置" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" />
-                <Button Content="恢复默认" Click="Reset_Click" />
-                <Button Content="打开数据目录" Click="OpenDataDirectory_Click" />
-            </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE895;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="启动时自动检查新版本" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="后台静默查询 GitHub Releases，有新版本时在顶部提醒" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="CheckUpdatesOnStartupSwitch" Grid.Column="2" OnContent="开" OffContent="关" MinWidth="0" VerticalAlignment="Center" Toggled="SettingControl_Changed" />
+                        </Grid>
+                    </Border>
+
+                    <!-- 数据与维护 -->
+                    <TextBlock Text="数据与维护" Style="{StaticResource SettingsGroupHeaderStyle}" />
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE8B7;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="配置与日志目录" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="打开本地 data 文件夹以查看配置文件与崩溃日志" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="打开目录" VerticalAlignment="Center" Click="OpenDataDirectory_Click" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE777;" FontSize="18" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="恢复默认设置" Style="{StaticResource BodyTextBlockStyle}" />
+                                <TextBlock Text="重置外观、托盘与刷新选项（不会删除已保存的 SSH 隧道）" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="恢复默认" VerticalAlignment="Center" Click="Reset_Click" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
 </Page>

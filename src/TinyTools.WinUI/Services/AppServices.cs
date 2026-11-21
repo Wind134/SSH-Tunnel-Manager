@@ -13,7 +13,7 @@ public sealed class AppServices : IDisposable
     private readonly DispatcherQueue _dispatcherQueue;
     private bool _disposed;
 
-    public TunnelManager TunnelManager { get; } = new();
+    public TunnelManager TunnelManager { get; }
     public UpdateCoordinator UpdateCoordinator { get; }
     public ObservableCollection<string> LogEntries { get; } = new();
     public AppSettings Settings { get; private set; }
@@ -21,6 +21,14 @@ public sealed class AppServices : IDisposable
     public AppServices(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
+        // 确保隧道状态属性变更始终在 WinUI 主线程触发，避免跨线程异常中断连接
+        TunnelManager = new TunnelManager(action =>
+        {
+            if (_dispatcherQueue.HasThreadAccess)
+                action();
+            else
+                _dispatcherQueue.TryEnqueue(() => action());
+        });
         UpdateCoordinator = new UpdateCoordinator(dispatcherQueue);
 
         ConfigFile config;
