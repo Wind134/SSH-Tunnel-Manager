@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using Microsoft.UI.Dispatching;
 using SSHTunnelManager.Models;
@@ -6,11 +7,15 @@ using SSHTunnelManager.Services;
 namespace TinyTools.WinUI.Services;
 
 /// <summary>
-/// 应用服务容器：集中管理隧道引擎、日志、配置与全局更新协调器。
+/// 应用服务容器：集中管理隧道引擎、日志节流缓冲、配置与全局更新协调器。
 /// </summary>
 public sealed class AppServices : IDisposable
 {
+    private const int MaxLogEntries = 500;
     private readonly DispatcherQueue _dispatcherQueue;
+    private readonly DispatcherQueueTimer _logFlushTimer;
+    private readonly ConcurrentQueue<string> _pendingLogs = new();
+    private int _flushScheduled;
     private bool _disposed;
 
     public TunnelManager TunnelManager { get; }
@@ -21,7 +26,12 @@ public sealed class AppServices : IDisposable
     public AppServices(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
-        // 确保隧道状态属性变更始终在 WinUI 主线程触发，避免跨线程异常中断连接
+        // 150ms 批量刷新日志，避免高频隧道请求阻塞 UI 线程或触发 ListView 布局异常
+        _logFlushTimer = dispatcherQueue.CreateTimer();
+        _logFlushTimer.Interval = TimeSpan.FromMilliseconds(150);
+        _logFlushTimer.IsRepeating = false;
+        _logFlushTimer.Tick += (_, _) => FlushPendingLogs();
+
         TunnelManager = new TunnelManager(action =>
         {
             if (_dispatcherQueue.HasThreadAccess)
@@ -77,17 +87,37 @@ public sealed class AppServices : IDisposable
 
     private void OnLogMessage(string tunnelName, string message)
     {
-        void AddLog()
-        {
-            LogEntries.Insert(0, message);
-            if (LogEntries.Count > 500)
-                LogEntries.RemoveAt(LogEntries.Count - 1);
-        }
+        if (_disposed)
+            return;
 
-        if (_dispatcherQueue.HasThreadAccess)
-            AddLog();
-        else
-            _dispatcherQueue.TryEnqueue(AddLog);
+        _pendingLogs.Enqueue(message);
+        if (Interlocked.Exchange(ref _flushScheduled, 1) == 0)
+            _dispatcherQueue.TryEnqueue(() => _logFlushTimer.Start());
+    }
+
+    private void FlushPendingLogs()
+    {
+        Interlocked.Exchange(ref _flushScheduled, 0);
+        if (_disposed)
+            return;
+
+        var batch = new List<string>();
+        while (_pendingLogs.TryDequeue(out string? entry))
+            batch.Add(entry);
+
+        if (batch.Count == 0)
+            return;
+
+        // 仅保留最新 500 条，防止单次突发流量撑爆列表
+        int start = Math.Max(0, batch.Count - MaxLogEntries);
+        for (int i = start; i < batch.Count; i++)
+            LogEntries.Insert(0, batch[i]);
+
+        while (LogEntries.Count > MaxLogEntries)
+            LogEntries.RemoveAt(LogEntries.Count - 1);
+
+        if (!_pendingLogs.IsEmpty && Interlocked.Exchange(ref _flushScheduled, 1) == 0)
+            _logFlushTimer.Start();
     }
 
     public void Dispose()
@@ -97,6 +127,7 @@ public sealed class AppServices : IDisposable
 
         SaveTunnels();
         _disposed = true;
+        _logFlushTimer.Stop();
         TunnelManager.LogMessage -= OnLogMessage;
         TunnelManager.ConfigChanged -= OnConfigChanged;
         UpdateCoordinator.Dispose();

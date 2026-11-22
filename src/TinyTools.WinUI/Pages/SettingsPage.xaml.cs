@@ -10,6 +10,7 @@ namespace TinyTools.WinUI.Pages;
 public sealed partial class SettingsPage : Page
 {
     private bool _isPopulating;
+    private bool? _isNarrow;
     private UpdateCoordinator Updater => App.Services.UpdateCoordinator;
 
     public SettingsPage()
@@ -38,7 +39,15 @@ public sealed partial class SettingsPage : Page
 
     private void ApplyResponsivePadding(double width)
     {
-        PageRoot.Padding = width < 680
+        if (width <= 0)
+            return;
+
+        bool narrow = width < 680;
+        if (_isNarrow == narrow)
+            return;
+
+        _isNarrow = narrow;
+        PageRoot.Padding = narrow
             ? new Thickness(16, 16, 16, 0)
             : new Thickness(36, 24, 36, 0);
     }

@@ -11,6 +11,7 @@ namespace TinyTools.WinUI.Pages;
 public sealed partial class TunnelsPage : Page
 {
     private bool _logsCollapsed;
+    private bool? _isNarrow;
     private TunnelManager Manager => App.Services.TunnelManager;
 
     public TunnelsPage()
@@ -42,10 +43,17 @@ public sealed partial class TunnelsPage : Page
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
         => ApplyResponsiveLayout(e.NewSize.Width);
 
-    // 窄窗口自动缩小边距并将页头按钮折行
+    // 窄窗口自动缩小边距并将页头按钮折行（仅状态切换时更新，防止布局循环）
     private void ApplyResponsiveLayout(double width)
     {
+        if (width <= 0)
+            return;
+
         bool narrow = width < 680;
+        if (_isNarrow == narrow)
+            return;
+
+        _isNarrow = narrow;
         LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
         Grid.SetRow(HeaderActions, narrow ? 1 : 0);
         Grid.SetColumn(HeaderActions, narrow ? 0 : 1);

@@ -23,6 +23,8 @@ internal sealed class WindowPlacementManager : IDisposable
     };
     private bool _initialized;
     private bool _disposed;
+    private int _lastMinPhysicalWidth;
+    private int _lastMinPhysicalHeight;
 
     public WindowPlacementManager(
         Window window,
@@ -78,8 +80,15 @@ internal sealed class WindowPlacementManager : IDisposable
                 displayArea.WorkArea.Height / scale)
             : new LogicalWindowSize(WindowSizePolicy.MinimumWidth, WindowSizePolicy.MinimumHeight);
 
-        presenter.PreferredMinimumWidth = ToPhysicalPixels(minLogical.Width, scale);
-        presenter.PreferredMinimumHeight = ToPhysicalPixels(minLogical.Height, scale);
+        int minPhysicalWidth = ToPhysicalPixels(minLogical.Width, scale);
+        int minPhysicalHeight = ToPhysicalPixels(minLogical.Height, scale);
+        if (minPhysicalWidth == _lastMinPhysicalWidth && minPhysicalHeight == _lastMinPhysicalHeight)
+            return;
+
+        _lastMinPhysicalWidth = minPhysicalWidth;
+        _lastMinPhysicalHeight = minPhysicalHeight;
+        presenter.PreferredMinimumWidth = minPhysicalWidth;
+        presenter.PreferredMinimumHeight = minPhysicalHeight;
     }
 
     private void ApplyInitialPlacement()
