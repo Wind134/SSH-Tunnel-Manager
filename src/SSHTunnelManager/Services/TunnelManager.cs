@@ -220,20 +220,27 @@ public class TunnelManager : IDisposable
         await ConnectAsync(state, state.ReconnectCts.Token);
     }
 
-    public Task StopTunnel(TunnelState state)
+    public async Task StopTunnel(TunnelState state)
     {
         state.ReconnectCts?.Cancel();
         state.ReconnectCts = null;
 
-        CleanupResources(state);
+        // 先摘除引用并立即更新状态，再于后台线程释放底层连接，避免阻塞 UI 线程
+        var client = state.Client;
+        var forward = state.ForwardedPort;
+        state.Client = null;
+        state.ForwardedPort = null;
+
         state.Status = TunnelStatus.Disconnected;
         state.StatusMessage = string.Empty;
         state.ConnectedSince = null;
 
-        var name = state.Config.Name;
-        Log(name, "隧道已停止");
+        if (client is not null || forward is not null)
+        {
+            await Task.Run(() => CleanupPair(client, forward)).ConfigureAwait(false);
+        }
 
-        return Task.CompletedTask;
+        Log(state.Config.Name, "隧道已停止");
     }
 
     public async Task StartAllAsync()
@@ -636,20 +643,27 @@ public class TunnelManager : IDisposable
     // because it tolerates null refs and swallows double-dispose.
     private static void CleanupResources(TunnelState state)
     {
-        try
-        {
-            state.ForwardedPort?.Stop();
-            state.ForwardedPort?.Dispose();
-        }
-        catch { /* ignore */ }
-        try
-        {
-            state.Client?.Disconnect();
-            state.Client?.Dispose();
-        }
-        catch { /* ignore */ }
+        var client = state.Client;
+        var forward = state.ForwardedPort;
         state.ForwardedPort = null;
         state.Client = null;
+        CleanupPair(client, forward);
+    }
+
+    private static void CleanupPair(SshClient? client, ForwardedPortRemote? forward)
+    {
+        try
+        {
+            forward?.Stop();
+            forward?.Dispose();
+        }
+        catch { }
+        try
+        {
+            client?.Disconnect();
+            client?.Dispose();
+        }
+        catch { }
     }
 
     // SSH.NET exceptions frequently embed the literal "host:port" in their

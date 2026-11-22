@@ -21,7 +21,7 @@
     <AssemblyTitle>TinyTools</AssemblyTitle>
     <Company>AI开发工具</Company>
     <Product>TinyTools</Product>
-    <Version>1.2.3</Version>
+    <Version>1.2.4</Version>
   </PropertyGroup>
 
   <ItemGroup>

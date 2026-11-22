@@ -18,6 +18,7 @@ public sealed partial class FileLocksPage : Page
 
     private readonly ObservableCollection<FileLockEntry> _items = new();
     private CancellationTokenSource? _queryCancellation;
+    private bool? _isNarrow;
 
     public FileLocksPage()
     {
@@ -37,10 +38,17 @@ public sealed partial class FileLocksPage : Page
     private void TableScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
         => UpdateTableWidth(e.NewSize.Width);
 
-    // 窄屏时缩小边距并将按钮组折行
+    // 窄屏时缩小边距并将按钮组折行（仅状态切换时更新，避免触发布局循环）
     private void ApplyResponsiveLayout(double width)
     {
+        if (width <= 0)
+            return;
+
         bool narrow = width < 760;
+        if (_isNarrow == narrow)
+            return;
+
+        _isNarrow = narrow;
         LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
         Grid.SetColumnSpan(PathBox, narrow ? 2 : 1);
         Grid.SetRow(ActionButtons, narrow ? 1 : 0);
@@ -50,8 +58,12 @@ public sealed partial class FileLocksPage : Page
 
     private void UpdateTableWidth(double viewportWidth)
     {
-        if (viewportWidth > 0)
-            TableHost.Width = Math.Max(MinTableWidth, viewportWidth);
+        if (viewportWidth <= 0)
+            return;
+
+        double targetWidth = Math.Floor(Math.Max(MinTableWidth, viewportWidth - 2));
+        if (double.IsNaN(TableHost.Width) || Math.Abs(TableHost.Width - targetWidth) >= 1)
+            TableHost.Width = targetWidth;
     }
 
     private async void QueryButton_Click(object sender, RoutedEventArgs e)

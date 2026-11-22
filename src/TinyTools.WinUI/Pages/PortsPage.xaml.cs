@@ -18,6 +18,7 @@ public sealed partial class PortsPage : Page
     private CancellationTokenSource? _refreshCancellation;
     private bool _initialized;
     private bool _refreshing;
+    private bool? _isNarrow;
 
     public PortsPage()
     {
@@ -50,10 +51,17 @@ public sealed partial class PortsPage : Page
     private void TableScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
         => UpdateTableWidth(e.NewSize.Width);
 
-    // 窄屏时缩小边距，并将搜索栏折到第二行
+    // 窄屏时缩小边距并将搜索栏折到第二行（仅状态切换时更新，避免触发布局循环）
     private void ApplyResponsiveLayout(double width)
     {
+        if (width <= 0)
+            return;
+
         bool narrow = width < 780;
+        if (_isNarrow == narrow)
+            return;
+
+        _isNarrow = narrow;
         LayoutRoot.Padding = narrow ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
         Grid.SetRow(SearchContainer, narrow ? 1 : 0);
         Grid.SetColumn(SearchContainer, narrow ? 0 : 1);
@@ -62,8 +70,12 @@ public sealed partial class PortsPage : Page
 
     private void UpdateTableWidth(double viewportWidth)
     {
-        if (viewportWidth > 0)
-            TableHost.Width = Math.Max(MinTableWidth, viewportWidth);
+        if (viewportWidth <= 0)
+            return;
+
+        double targetWidth = Math.Floor(Math.Max(MinTableWidth, viewportWidth - 2));
+        if (double.IsNaN(TableHost.Width) || Math.Abs(TableHost.Width - targetWidth) >= 1)
+            TableHost.Width = targetWidth;
     }
 
     private async void AutoRefreshTimer_Tick(object? sender, object e)
