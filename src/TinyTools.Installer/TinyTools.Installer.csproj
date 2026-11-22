@@ -14,7 +14,7 @@
     <AssemblyTitle>TinyTools 安装程序</AssemblyTitle>
     <Product>TinyTools</Product>
     <Company>AI开发工具</Company>
-    <Version>1.2.3</Version>
+    <Version>1.2.4</Version>
     <PayloadZipPath Condition="'$(PayloadZipPath)' == ''">payload.zip</PayloadZipPath>
   </PropertyGroup>
 
